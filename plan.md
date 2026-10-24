@@ -1,77 +1,59 @@
-# Plano — Entrega 1: contas e autenticação
+# Plano — Site Livraria
 
-## Escopo
+## Entrega 1 — contas e autenticação
 
-Implementar cadastro e login reais para a livraria, persistindo usuários no MySQL, armazenando somente hashes de senha e protegendo as páginas `/meus-livros` e `/admin`. Não fazer commit nem push; as alterações ficam apenas na pasta local do projeto.
+### Escopo e abordagem
 
-## Abordagem
+Implementar cadastro e login reais para a livraria, persistindo usuários no MySQL, armazenando somente hashes de senha e protegendo `/meus-livros` e `/admin`. Manter Next.js 16 App Router e o visual de autenticação existente. Usar Prisma com MySQL e modelos `User`/`Session`; e-mail único normalizado, nome, hash de senha, papéis `USER`/`ADMIN`, token de sessão guardado como hash e validade da sessão.
 
-- Manter o Next.js 16 App Router e o visual existente da tela de autenticação.
-- Usar Prisma com o MySQL local. Criar os modelos `User` e `Session`: e-mail único normalizado, nome, hash de senha, papel `USER`/`ADMIN`, token de sessão armazenado como hash e validade da sessão.
-- Processar cadastro, login e logout no servidor. Validar os campos no servidor, hash de senha com Argon2id, mensagens de login genéricas e sessão opaca em cookie `HttpOnly`, `SameSite=Lax`, com `Secure` em HTTPS.
-- Centralizar acesso ao usuário e autorização em módulos server-only. `/meus-livros` exige sessão válida; `/admin` exige sessão válida com papel `ADMIN`. Contas novas recebem sempre o papel `USER`; a promoção inicial a administrador será manual no banco, documentada e sem endpoint público.
-- Substituir a navegação simulada dos formulários por ações reais, mostrar o nome do usuário autenticado na área dele e encerrar a sessão de fato no logout. Preservar o restante do catálogo e as telas demonstrativas de compras/estante, que pertencem a entregas posteriores.
-- Não colocar credenciais no código, no Git ou nesta conversa. A conexão será configurada em arquivo local ignorado pelo Git; será fornecido um exemplo sem segredos.
+Processar cadastro, login e logout no servidor; validar campos, usar Argon2id, mensagens genéricas para credenciais inválidas e cookie de sessão `HttpOnly`, `SameSite=Lax`, `Secure` em HTTPS. Centralizar acesso e autorização em módulos server-only. Contas novas recebem `USER`; promover o primeiro administrador manualmente no banco. Não colocar credenciais no código, Git ou conversa.
 
-## Estrutura prevista
+### Estrutura, design e limites
 
-- `prisma/schema.prisma` e migração local: modelos de usuário e sessão.
-- `src/lib/db.ts`: instância única do Prisma.
-- `src/lib/session.ts` e `src/lib/auth.ts`: criação, validação, revogação de sessão e acesso autenticado.
-- `src/app/actions/auth.ts`: ações de cadastro, login e logout.
-- `src/components/AuthForms.tsx`: formulários conectados às ações e estados de erro/sucesso.
-- `src/app/meus-livros/page.tsx` e `src/app/admin/page.tsx`: verificação de autenticação/autorização no servidor.
-- `.env.example` e documentação local: formato da variável `DATABASE_URL`, migração e criação manual de administrador; nenhum valor secreto será incluído.
+- `prisma/schema.prisma`, migrations, `src/lib/db.ts`, `src/lib/session.ts`, `src/lib/auth.ts` e `src/app/actions/auth.ts` definem os dados e a autenticação.
+- `src/components/AuthForms.tsx`, `src/app/meus-livros/page.tsx` e `src/app/admin/page.tsx` implementam os fluxos e as proteções.
+- Reutilizar fundo claro, verde-petróleo nas ações, dourado nos destaques e tipografia Bricolage Grotesque/Figtree.
+- A implementação foi mantida local. O usuário confirmou que o login funciona; logout e bloqueios de acesso ainda podem ser exercitados no navegador.
 
-## Design
+## Entrega 2 — catálogo MySQL e metadados no Admin
 
-Reutilizar o estilo atual da livraria — interface clara, verde-petróleo como cor de ação e dourado nos destaques, tipografia Bricolage Grotesque/Figtree e componentes de formulário existentes. As telas de autenticação continuam em português e não terão mudança visual ampla.
+**Status:** escopo escolhido pelo usuário; alterações permanecem somente na pasta local, sem commit ou push.
 
-## Dependências e limites
+### Resultado esperado
 
-- O serviço local responde em `127.0.0.1:3306`, mas a raiz do projeto ainda não tem `.env`/`.env.local`. A migração exige uma variável `DATABASE_URL` local apontando a um banco e usuário próprios da livraria; não usar a conta `root` no aplicativo.
-- A Entrega 1 não inclui recuperação de senha, e-mail transacional, compras, entrega de livros, gestão do catálogo ou mudança para hospedagem.
-- Não alterar o repositório remoto, não fazer commit e não enviar o projeto para serviços externos.
+O catálogo público lê livros e autores do MySQL, em vez de usar os arrays fictícios como fonte de verdade. Um administrador autenticado também pode cadastrar e editar os metadados dos livros pela área `/admin`. As páginas mantêm o layout atual.
 
-## Verificação
+### Dados e leitura pública
 
-Executar os checks locais disponíveis (lint e build/typecheck), aplicar a migração somente ao banco local configurado para a livraria e validar cadastro, login, logout, bloqueio de `/meus-livros` sem sessão e bloqueio de `/admin` para contas sem papel administrativo. Se faltarem as credenciais locais, deixar a migração pendente sem expor segredos e orientar como completar a configuração.
+Adicionar modelos Prisma `Author` e `Book`, relacionados por chave estrangeira e com os campos usados pelo site: nome/título, slugs, biografia, autor, ano, categoria, número de páginas, preço, sinopse, cores da capa e os campos demonstrativos de avaliação que a interface atual exibe. Criar um seed explícito, idempotente, com os seis autores e oito livros de exemplo existentes; esses registros são metadados fictícios, não arquivos de livros. Os exemplos existentes começam publicados. Não executar seed automaticamente em build ou deploy.
 
+Criar uma camada server-only de catálogo que consulte o MySQL e retorne DTOs públicos simples; converter preços Prisma `Decimal` para `number` antes de passá-los aos componentes. A página inicial, busca, categorias, detalhes `/livro/[slug]`, perfis `/autor/[slug]` e recomendações relacionadas passam a usar essas consultas. A busca e os filtros preservam seu comportamento atual; páginas de autores/livros mantêm título e descrição próprios. Consultas não armazenadas em cache ficam em componentes assíncronos protegidos por Suspense, conforme Cache Components do Next.js instalado.
 
----
+O carrinho permanece local e demonstrativo, mas aceita itens recebidos do catálogo e guarda somente dados de exibição. O cliente não é fonte confiável de preço; o checkout futuro recalculará valores no servidor.
 
-# Proposta de plano — Entrega 2: catálogo persistido no MySQL
+### Cadastro e edição administrativa
 
-**Status:** proposta para aprovação; nenhuma implementação da Entrega 2 foi iniciada.
+A página `/admin` lista livros e permite criar e editar metadados: título, autor selecionado entre os autores cadastrados, ano, categoria, páginas, preço e sinopse. O slug é normalizado no servidor e precisa ser único. Registros novos começam como rascunho; o administrador pode publicar ou retirar do catálogo um livro. O catálogo público exibe somente livros publicados. Não haverá exclusão de registros nesta etapa.
 
-## Escopo proposto
+As ações de cadastro, edição e publicação validam novamente a sessão e o papel `ADMIN` no servidor, independentemente da proteção da página. Validação de campos e unicidade de slug ocorre no servidor, com mensagens úteis no formulário. Cores de capa continuam usando o tratamento visual existente; não haverá upload de imagem.
 
-O código identifica livros e autores como dados fictícios e prevê movê-los ao MySQL na Entrega 2/3. Esta etapa transforma o catálogo público em dados persistidos, preservando as páginas e o visual que já existem.
+### Limites desta etapa
 
-Adicionar os modelos Prisma `Author` e `Book`, com relação entre autor e livros e campos de catálogo que a interface atual já usa. Criar um seed manual, repetível e idempotente com os seis autores e oito livros de exemplo atuais; o seed guardará somente metadados, não arquivos EPUB/PDF.
+Sem upload ou armazenamento de EPUB/PDF, leitor com conteúdo real, download protegido, pedidos, Mercado Pago, webhooks, avaliações reais, edição de autores ou estatísticas reais de vendas. O carrinho e o checkout permanecem demonstrativos; publicar um registro nesta etapa publica seus metadados, não disponibiliza um arquivo digital.
 
-Criar uma camada de acesso a dados `server-only` que leia do MySQL e retorne DTOs públicos serializáveis, sem credenciais nem campos internos. A página inicial, busca e filtro por categoria, página de detalhes `/livro/[slug]`, perfis `/autor/[slug]` e livros relacionados passarão a ler esses dados no servidor. As rotas manterão seus títulos e descrições e usarão Suspense para leituras do banco em tempo de requisição, conforme o modo Cache Components instalado.
+### Implementação e compatibilidade
 
-Adaptar o carrinho local para exibir os livros vindos do catálogo. O carrinho continua sendo apenas uma conveniência no navegador: não criará pedidos nem validará valores para pagamento. O preço autoritativo será consultado no servidor quando a etapa de checkout real for implementada.
+Manter Next.js 16 App Router, Prisma 7/MySQL e os componentes visuais existentes. A camada de dados fica no servidor; client components recebem somente DTOs necessários. A migration será preparada como arquivo local e aplicada somente ao banco `livraria` configurado no `.env`, quando o MySQL local estiver acessível, usando `db:deploy` para não depender de shadow database. O seed será executado explicitamente e apenas contra o banco configurado pelo usuário. Não introduzir serviço externo, publicar o site ou alterar o repositório GitHub.
 
-## Fora desta etapa
+### Estrutura principal
 
-Esta proposta não inclui upload ou armazenamento de EPUB/PDF, leitor com conteúdo real, download protegido, compras/pedidos, Mercado Pago, webhooks, persistência de avaliações, gerenciamento administrativo de livros nem estatísticas de vendas. A página administrativa permanece protegida como já está, mas o formulário demonstrativo de cadastro não passará a publicar livros nesta etapa. Esses fluxos precisam de armazenamento de arquivos e regras de compra próprias, previstas para etapas posteriores.
+- `prisma/schema.prisma`, migrations e `prisma/seed.ts`: modelos e metadados de demonstração.
+- `src/lib/catalog.ts`: consultas server-only, DTOs e validação dos campos de catálogo.
+- `src/app/actions/catalog.ts`: ações de criação/edição/publicação protegidas por papel `ADMIN`.
+- `src/app/page.tsx`, `src/app/livro/[slug]/page.tsx` e `src/app/autor/[slug]/page.tsx`: catálogo público vindo do MySQL.
+- `src/app/admin/page.tsx` e componentes de formulário/lista: gestão dos metadados de livros.
+- `src/components/CatalogGrid.tsx`, `BookCard.tsx`, `BuyBox.tsx` e `src/lib/cart.tsx`: compatibilidade com DTOs do banco, mantendo o carrinho apenas demonstrativo.
 
-## Implementação e compatibilidade
+### Design
 
-Manter o Next.js 16 App Router, Prisma 7/MySQL e os componentes visuais existentes. O código de banco permanece no servidor; os componentes cliente recebem somente os campos necessários em formato simples, incluindo preço convertido de `Decimal` para `number`. Não introduzir serviço de hospedagem, integração externa, chave secreta nem dependência nova sem necessidade.
-
-A migration será preparada como arquivo local e aplicada somente ao banco `livraria` configurado em `.env`, quando o MySQL local estiver acessível. A aplicação será feita com `db:deploy` para não exigir criação automática de banco shadow nem ampliar privilégios. O seed será executado explicitamente, nunca durante build ou deploy. Nada será enviado ao GitHub; não farei commit nem push.
-
-## Estrutura principal
-
-- `prisma/schema.prisma`, migration e `prisma/seed.ts`: modelos e dados de demonstração do catálogo.
-- `src/lib/catalog.ts`: consultas de catálogo no servidor e conversão para DTOs.
-- `src/lib/data.ts`: tipos/formatadores que ainda forem necessários aos componentes, sem ser a fonte de verdade do catálogo público.
-- `src/app/page.tsx`, `src/app/livro/[slug]/page.tsx` e `src/app/autor/[slug]/page.tsx`: leitura do catálogo no servidor.
-- `src/components/CatalogGrid.tsx`, `BookCard.tsx`, `BuyBox.tsx` e `src/lib/cart.tsx`: compatibilidade do catálogo e do carrinho com os DTOs.
-
-## Design
-
-Reutilizar o design atual da livraria — fundo claro, verde-petróleo para ações, dourado nos destaques, tipografia Bricolage Grotesque/Figtree e componentes existentes. A etapa é de integração e dados; não haverá redesign amplo.
+Reutilizar o design atual da livraria — fundo claro, verde-petróleo para ações, dourado nos destaques, tipografia Bricolage Grotesque/Figtree e componentes existentes. Não haverá redesign amplo.
