@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
+import { Suspense } from "react";
 import { AUTHORS, BOOKS, formatBRL } from "@/lib/data";
 import { SalesChart } from "@/components/SalesChart";
+import { requireAdmin } from "@/lib/auth";
 
 export const metadata: Metadata = { title: "Painel da livraria" };
 
@@ -12,8 +14,22 @@ const ORDERS: [string, string, number, string, number, boolean][] = [
   ["#1184", "Lucas T.", 7, "Pix", 34.9, true],
 ];
 
-// TODO Entrega 4: proteger esta rota (só administradores) e ligar ao banco de dados.
 export default function AdminPage() {
+  return (
+    <Suspense
+      fallback={
+        <p className="muted" aria-live="polite">
+          Carregando painel…
+        </p>
+      }
+    >
+      <AuthorizedAdminDashboard />
+    </Suspense>
+  );
+}
+
+async function AuthorizedAdminDashboard() {
+  await requireAdmin();
   return (
     <div className="admin">
       <nav className="side" aria-label="Administração">

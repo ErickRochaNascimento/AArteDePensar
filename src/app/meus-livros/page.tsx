@@ -1,7 +1,10 @@
 import type { Metadata } from "next";
+import { Suspense } from "react";
 import Link from "next/link";
 import { BOOKS } from "@/lib/data";
 import { Cover } from "@/components/Cover";
+import { logoutAction } from "@/app/actions/auth";
+import { requireUser } from "@/lib/auth";
 
 export const metadata: Metadata = { title: "Meus Livros" };
 
@@ -15,17 +18,36 @@ const SHELF: [number, number][] = [
 
 export default function MeusLivrosPage() {
   return (
+    <Suspense
+      fallback={
+        <div className="prof">
+          <p className="muted" aria-live="polite">
+            Carregando sua estante…
+          </p>
+        </div>
+      }
+    >
+      <AuthenticatedBookshelf />
+    </Suspense>
+  );
+}
+
+async function AuthenticatedBookshelf() {
+  const user = await requireUser();
+  return (
     <div className="prof">
       <nav className="side" aria-label="Área do cliente">
         <Link href="/meus-livros" aria-current="page">
           Meus livros
         </Link>
         <Link href="/meus-livros#dados">Meus dados</Link>
-        <Link href="/entrar">Sair</Link>
+        <form action={logoutAction}>
+          <button type="submit">Sair</button>
+        </form>
       </nav>
 
       <div>
-        <h1 style={{ fontSize: 26, marginBottom: 6 }}>Olá, Camila</h1>
+        <h1 style={{ fontSize: 26, marginBottom: 6 }}>Olá, {user.name}</h1>
         <p className="muted" style={{ margin: "0 0 20px" }}>
           Você tem {SHELF.length} livros na sua estante.
         </p>
@@ -71,11 +93,11 @@ export default function MeusLivrosPage() {
           <h2 style={{ fontSize: 18 }}>Meus dados</h2>
           <label>
             Nome
-            <input type="text" defaultValue="Camila Ribeiro" />
+            <input type="text" defaultValue={user.name} />
           </label>
           <label>
             E-mail
-            <input type="email" defaultValue="camila@exemplo.com" />
+            <input type="email" defaultValue={user.email} />
           </label>
           <div>
             <button type="button" className="btn sm">

@@ -1,0 +1,1 @@
+{"routes":[{"path":"/","title":"Início"},{"path":"/admin","title":"Painel da livraria"},{"path":"/autor/:slug","title":"Autor"},{"path":"/checkout","title":"Checkout"},{"path":"/entrar","title":"Entrar ou criar conta"},{"path":"/leitor/:slug","title":"Leitor"},{"path":"/livro/:slug","title":"Livro"},{"path":"/meus-livros","title":"Meus livros"}]}
