@@ -147,3 +147,11 @@ vite.config.ts.timestamp-*
 
 # Turbo Repo
 .turbo
+
+# Segredos (nunca versionar)
+.env
+.env.local
+.env.*.local
+
+# Livros (arquivos pagos, não vão para o Git)
+storage/
