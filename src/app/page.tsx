@@ -1,69 +1,67 @@
-import Image from "next/image";
-import styles from "./page.module.css";
+import { Suspense } from "react";
+import { AUTHORS, BOOKS, CATEGORIES } from "@/lib/data";
+import { AuthorAvatar } from "@/components/AuthorAvatar";
+import { BookCard } from "@/components/BookCard";
+import { CatalogGrid } from "@/components/CatalogGrid";
 
-export default function Home() {
+// Ranking de exemplo; na Entrega 4 virá das vendas reais.
+const BEST_SELLERS = [...BOOKS].reverse().slice(0, 6);
+
+export default function Home({ searchParams }: PageProps<"/">) {
   return (
-    <div className={styles.page}>
-      <main className={styles.main}>
-        <Image
-          className={styles.logo}
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className={styles.intro}>
-          <h1>
-            To get started, edit the{" "}
-            <code className={styles.code}>page.tsx</code> file.
-          </h1>
-          <p>
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
+    <>
+      {/* A busca (?q=) depende da requisição, por isso fica dentro de Suspense. */}
+      <Suspense fallback={<CatalogSection />}>
+        <SearchedCatalog searchParams={searchParams} />
+      </Suspense>
+
+      <section className="sec" id="mais-vendidos">
+        <h2>Mais vendidos da semana</h2>
+        <div className="row">
+          {BEST_SELLERS.map((b) => (
+            <BookCard key={b.id} book={b} />
+          ))}
         </div>
-        <div className={styles.ctas}>
-          <a
-            className={styles.primary}
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className={styles.logo}
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={14}
-            />
-            Deploy Now
-          </a>
-          <a
-            className={styles.secondary}
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
+      </section>
+
+      <section className="sec" id="autores">
+        <h2>Autores</h2>
+        <div className="authors">
+          {AUTHORS.map((a) => (
+            <AuthorAvatar key={a.slug} author={a} />
+          ))}
         </div>
-      </main>
-    </div>
+      </section>
+    </>
+  );
+}
+
+async function SearchedCatalog({
+  searchParams,
+}: {
+  searchParams: PageProps<"/">["searchParams"];
+}) {
+  const { q } = await searchParams;
+  const raw = typeof q === "string" ? q.trim() : "";
+  return <CatalogSection term={raw} />;
+}
+
+function CatalogSection({ term = "" }: { term?: string }) {
+  const needle = term.toLowerCase();
+  const books = needle
+    ? BOOKS.filter((b) => `${b.title} ${b.author}`.toLowerCase().includes(needle))
+    : BOOKS;
+
+  return (
+    <section className="sec" id="catalogo">
+      <div className="sec-head">
+        <h2>{term ? `Resultados para “${term}”` : "Livros digitais para ler agora"}</h2>
+      </div>
+      {books.length > 0 ? (
+        <CatalogGrid books={books} categories={CATEGORIES} />
+      ) : (
+        <p className="muted">Nenhum livro encontrado. Tente buscar por outro título ou autor.</p>
+      )}
+    </section>
   );
 }

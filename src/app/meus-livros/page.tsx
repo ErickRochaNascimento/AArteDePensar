@@ -1,0 +1,89 @@
+import type { Metadata } from "next";
+import Link from "next/link";
+import { BOOKS } from "@/lib/data";
+import { Cover } from "@/components/Cover";
+
+export const metadata: Metadata = { title: "Meus Livros" };
+
+// Dados de exemplo: [índice do livro, % lido]. Na Entrega 3 vêm das compras do usuário.
+const SHELF: [number, number][] = [
+  [0, 62],
+  [2, 18],
+  [5, 100],
+  [6, 0],
+];
+
+export default function MeusLivrosPage() {
+  return (
+    <div className="prof">
+      <nav className="side" aria-label="Área do cliente">
+        <Link href="/meus-livros" aria-current="page">
+          Meus livros
+        </Link>
+        <Link href="/meus-livros#dados">Meus dados</Link>
+        <Link href="/entrar">Sair</Link>
+      </nav>
+
+      <div>
+        <h1 style={{ fontSize: 26, marginBottom: 6 }}>Olá, Camila</h1>
+        <p className="muted" style={{ margin: "0 0 20px" }}>
+          Você tem {SHELF.length} livros na sua estante.
+        </p>
+
+        <div className="shelf">
+          {SHELF.map(([i, pct]) => {
+            const b = BOOKS[i];
+            return (
+              <div className="own" key={b.id}>
+                <Cover book={b} />
+                <div>
+                  <b>{b.title}</b>
+                  <small className="muted">{b.author}</small>
+                  <div
+                    className="prog"
+                    role="progressbar"
+                    aria-valuenow={pct}
+                    aria-valuemin={0}
+                    aria-valuemax={100}
+                    aria-label={`${pct}% lido`}
+                  >
+                    <b style={{ width: `${pct}%` }} />
+                  </div>
+                  <small className="muted">
+                    {pct === 0 ? "Não iniciado" : pct === 100 ? "Concluído" : `${pct}% lido`}
+                  </small>
+                  <div className="acts">
+                    <Link className="btn sm" href={`/leitor/${b.slug}`}>
+                      {pct ? "Continuar" : "Ler online"}
+                    </Link>
+                    {/* Entrega 3: link para a rota protegida de download */}
+                    <button type="button" className="btn sm ghost">
+                      Baixar
+                    </button>
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+
+        <div className="panel" id="dados" style={{ marginTop: 30, maxWidth: 520 }}>
+          <h2 style={{ fontSize: 18 }}>Meus dados</h2>
+          <label>
+            Nome
+            <input type="text" defaultValue="Camila Ribeiro" />
+          </label>
+          <label>
+            E-mail
+            <input type="email" defaultValue="camila@exemplo.com" />
+          </label>
+          <div>
+            <button type="button" className="btn sm">
+              Salvar alterações
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
