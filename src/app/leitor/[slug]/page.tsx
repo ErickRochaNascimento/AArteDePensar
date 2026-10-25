@@ -34,5 +34,13 @@ async function Reader({ params }: Pick<PageProps<"/leitor/[slug]">, "params">) {
   // Retorna a mesma resposta para livro inexistente ou sem propriedade, sem vazar conteúdo.
   if (!libraryItem) notFound();
 
-  return <ReaderClient title={libraryItem.book.title} />;
+  return (
+    <ReaderClient
+      title={libraryItem.book.title}
+      slug={libraryItem.book.slug}
+      hasEbook={libraryItem.hasEbook}
+      ebookMimeType={libraryItem.ebookMimeType}
+      ebookOriginalName={libraryItem.ebookOriginalName}
+    />
+  );
 }

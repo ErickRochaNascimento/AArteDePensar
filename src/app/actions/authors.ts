@@ -51,11 +51,11 @@ export async function saveAuthorAction(
       ? await getDb().author.update({
           where: { id },
           data: { name: values.name, bio: values.bio, color: values.color },
-          select: { id: true, name: true, slug: true, bio: true, color: true },
+          select: { id: true, name: true, slug: true, bio: true, color: true, photoUrl: true },
         })
       : await getDb().author.create({
           data: { name: values.name, slug, bio: values.bio, color: values.color },
-          select: { id: true, name: true, slug: true, bio: true, color: true },
+          select: { id: true, name: true, slug: true, bio: true, color: true, photoUrl: true },
         });
 
     revalidatePath("/admin");

@@ -21,6 +21,7 @@ const bookSelect = {
   synopsis: true,
   c1: true,
   c2: true,
+  coverImageUrl: true,
   published: true,
   author: { select: { name: true, slug: true } },
 } as const;
@@ -38,6 +39,7 @@ type BookRow = {
   synopsis: string;
   c1: string;
   c2: string;
+  coverImageUrl: string | null;
   published: boolean;
   author: { name: string; slug: string };
 };
@@ -58,10 +60,18 @@ function toBook(row: BookRow): Book {
     synopsis: row.synopsis,
     c1: row.c1,
     c2: row.c2,
+    coverImageUrl: row.coverImageUrl,
   };
 }
 
-export type AdminBook = Book & { published: boolean; authorId: string };
+export type AdminBook = Book & {
+  published: boolean;
+  authorId: string;
+  hasEbook: boolean;
+  ebookMimeType: string | null;
+  ebookOriginalName: string | null;
+  ebookSize: number | null;
+};
 
 /** Livros publicados; `term` filtra por título ou nome do autor. */
 export const listPublishedBooks = cache(async (term = ""): Promise<Book[]> => {
@@ -128,6 +138,7 @@ export const listAuthorsWithBooks = cache(async (): Promise<Author[]> => {
       name: true,
       color: true,
       bio: true,
+      photoUrl: true,
       _count: { select: { books: { where: { published: true } } } },
     },
     orderBy: { name: "asc" },
@@ -137,6 +148,7 @@ export const listAuthorsWithBooks = cache(async (): Promise<Author[]> => {
     name: a.name,
     color: a.color,
     bio: a.bio,
+    photoUrl: a.photoUrl,
     bookCount: a._count.books,
   }));
 });
@@ -150,6 +162,7 @@ export const getAuthorWithBooks = cache(
         name: true,
         color: true,
         bio: true,
+        photoUrl: true,
         books: {
           where: { published: true },
           select: bookSelect,
@@ -165,6 +178,7 @@ export const getAuthorWithBooks = cache(
         name: row.name,
         color: row.color,
         bio: row.bio,
+        photoUrl: row.photoUrl,
         bookCount: books.length,
       },
       books,
@@ -176,10 +190,25 @@ export const getAuthorWithBooks = cache(
 
 export async function listAllBooksForAdmin(): Promise<AdminBook[]> {
   const rows = await getDb().book.findMany({
-    select: { ...bookSelect, authorId: true },
+    select: {
+      ...bookSelect,
+      authorId: true,
+      ebookStorageKey: true,
+      ebookMimeType: true,
+      ebookOriginalName: true,
+      ebookSize: true,
+    },
     orderBy: [{ updatedAt: "desc" }],
   });
-  return rows.map((row) => ({ ...toBook(row), published: row.published, authorId: row.authorId }));
+  return rows.map((row) => ({
+    ...toBook(row),
+    published: row.published,
+    authorId: row.authorId,
+    hasEbook: Boolean(row.ebookStorageKey),
+    ebookMimeType: row.ebookMimeType,
+    ebookOriginalName: row.ebookOriginalName,
+    ebookSize: row.ebookSize,
+  }));
 }
 
 export async function listAuthorOptions(): Promise<{ id: string; name: string }[]> {
@@ -195,6 +224,7 @@ export type AdminAuthor = {
   name: string;
   bio: string;
   color: string;
+  photoUrl: string | null;
   publishedBookCount: number;
   totalBookCount: number;
 };
@@ -207,6 +237,7 @@ export async function listAllAuthorsForAdmin(): Promise<AdminAuthor[]> {
       name: true,
       bio: true,
       color: true,
+      photoUrl: true,
       _count: { select: { books: true } },
       books: { where: { published: true }, select: { id: true } },
     },
@@ -219,6 +250,7 @@ export async function listAllAuthorsForAdmin(): Promise<AdminAuthor[]> {
     name: author.name,
     bio: author.bio,
     color: author.color,
+    photoUrl: author.photoUrl,
     publishedBookCount: author.books.length,
     totalBookCount: author._count.books,
   }));

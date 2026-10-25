@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Image from "next/image";
 import { notFound } from "next/navigation";
 import { Suspense, type CSSProperties } from "react";
 import { initials } from "@/lib/data";
@@ -48,7 +49,9 @@ async function AuthorDetail({ params }: Pick<PageProps<"/autor/[slug]">, "params
             } as CSSProperties
           }
         >
-          {initials(author.name)}
+          {author.photoUrl ? (
+            <Image className="avatar-photo" src={author.photoUrl} alt="" fill sizes="150px" unoptimized />
+          ) : initials(author.name)}
         </div>
         <div style={{ flex: "1 1 320px", minWidth: 0 }}>
           <h1 style={{ fontSize: 36 }}>{author.name}</h1>

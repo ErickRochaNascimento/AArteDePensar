@@ -1,11 +1,12 @@
 "use client";
 
 import Link from "next/link";
-import { useActionState, useState } from "react";
+import { useActionState, useState, type KeyboardEvent } from "react";
 import { saveBookAction } from "@/app/actions/catalog";
 import { AuthorAdminForm } from "@/components/AuthorAdminForm";
 import type { BookFormState } from "@/lib/book-form-types";
 import type { BookFormValues } from "@/lib/book-input";
+import { normalizeText } from "@/lib/data";
 
 type Props = {
   authors: { id: string; name: string }[];
@@ -17,16 +18,49 @@ type Props = {
 const INITIAL_STATE: BookFormState = {};
 
 export function BookAdminForm({ authors: availableAuthors, categories, initial }: Props) {
+  const initialAuthor = availableAuthors.find((author) => author.id === initial?.authorId);
   const [state, formAction, pending] = useActionState(saveBookAction, INITIAL_STATE);
   const [authors, setAuthors] = useState(availableAuthors);
   const [selectedAuthor, setSelectedAuthor] = useState(initial?.authorId ?? "");
+  const [authorSearch, setAuthorSearch] = useState(initialAuthor?.name ?? "");
+  const [authorMenuOpen, setAuthorMenuOpen] = useState(false);
+  const [activeAuthorIndex, setActiveAuthorIndex] = useState(0);
   const [showNewAuthor, setShowNewAuthor] = useState(availableAuthors.length === 0);
   const value = (key: keyof BookFormValues) => state.values?.[key] ?? initial?.[key] ?? "";
   const fieldError = (key: keyof BookFormValues) => state.fieldErrors?.[key];
+  const filteredAuthors = authors.filter((author) =>
+    normalizeText(author.name).includes(normalizeText(authorSearch.trim())),
+  );
+  const activeAuthor = filteredAuthors[activeAuthorIndex];
+
+  function selectAuthor(author: { id: string; name: string }) {
+    setSelectedAuthor(author.id);
+    setAuthorSearch(author.name);
+    setAuthorMenuOpen(false);
+  }
+
+  function handleAuthorKeyDown(event: KeyboardEvent<HTMLInputElement>) {
+    if (event.key === "ArrowDown") {
+      event.preventDefault();
+      setAuthorMenuOpen(true);
+      setActiveAuthorIndex((current) => Math.min(current + 1, Math.max(filteredAuthors.length - 1, 0)));
+    } else if (event.key === "ArrowUp") {
+      event.preventDefault();
+      setAuthorMenuOpen(true);
+      setActiveAuthorIndex((current) => Math.max(current - 1, 0));
+    } else if (event.key === "Enter" && authorMenuOpen && activeAuthor) {
+      event.preventDefault();
+      selectAuthor(activeAuthor);
+    } else if (event.key === "Escape") {
+      setAuthorMenuOpen(false);
+    }
+  }
 
   function useCreatedAuthor(author: { id: string; name: string }) {
-    setAuthors((current) => current.some((item) => item.id === author.id) ? current : [...current, author].sort((a, b) => a.name.localeCompare(b.name, "pt-BR")));
-    setSelectedAuthor(author.id);
+    setAuthors((current) => current.some((item) => item.id === author.id)
+      ? current
+      : [...current, author].sort((a, b) => a.name.localeCompare(b.name, "pt-BR")));
+    selectAuthor(author);
     setShowNewAuthor(false);
   }
 
@@ -34,6 +68,7 @@ export function BookAdminForm({ authors: availableAuthors, categories, initial }
     <>
       <form className="form" action={formAction} noValidate>
         {initial && <input type="hidden" name="id" value={initial.id} />}
+        <input type="hidden" name="authorId" value={selectedAuthor} />
 
         <label className="full">
           Título
@@ -41,20 +76,58 @@ export function BookAdminForm({ authors: availableAuthors, categories, initial }
           {fieldError("title") && <span className="error">{fieldError("title")}</span>}
         </label>
 
-        <label>
-          Autor
-          <select
-            name="authorId"
-            value={selectedAuthor}
-            onChange={(event) => setSelectedAuthor(event.target.value)}
-            aria-invalid={Boolean(fieldError("authorId"))}
-            required
-          >
-            <option value="" disabled>Selecione</option>
-            {authors.map((author) => <option key={author.id} value={author.id}>{author.name}</option>)}
-          </select>
-          {fieldError("authorId") && <span className="error">{fieldError("authorId")}</span>}
-        </label>
+        <div className="full author-combobox-field">
+          <label htmlFor="book-author-combobox">Autor</label>
+          <div className="author-combobox">
+            <input
+              id="book-author-combobox"
+              type="search"
+              role="combobox"
+              aria-autocomplete="list"
+              aria-expanded={authorMenuOpen}
+              aria-controls="book-author-options"
+              aria-activedescendant={authorMenuOpen && activeAuthor ? `book-author-option-${activeAuthor.id}` : undefined}
+              aria-invalid={Boolean(fieldError("authorId"))}
+              aria-required="true"
+              autoComplete="off"
+              value={authorSearch}
+              placeholder="Pesquise e selecione um autor"
+              onFocus={() => setAuthorMenuOpen(true)}
+              onBlur={() => setAuthorMenuOpen(false)}
+              onChange={(event) => {
+                setAuthorSearch(event.target.value);
+                setSelectedAuthor("");
+                setActiveAuthorIndex(0);
+                setAuthorMenuOpen(true);
+              }}
+              onKeyDown={handleAuthorKeyDown}
+            />
+            {authorMenuOpen && filteredAuthors.length > 0 && (
+              <div className="author-combobox-options" id="book-author-options" role="listbox" aria-label="Autores disponíveis">
+                {filteredAuthors.map((author, index) => (
+                  <button
+                    className="author-combobox-option"
+                    id={`book-author-option-${author.id}`}
+                    key={author.id}
+                    type="button"
+                    role="option"
+                    aria-selected={selectedAuthor === author.id}
+                    data-active={index === activeAuthorIndex}
+                    onMouseDown={(event) => event.preventDefault()}
+                    onClick={() => selectAuthor(author)}
+                  >
+                    {author.name}
+                  </button>
+                ))}
+              </div>
+            )}
+            {authorMenuOpen && filteredAuthors.length === 0 && (
+              <div className="author-combobox-empty" role="status">Nenhum autor encontrado. Você pode cadastrá-lo logo abaixo.</div>
+            )}
+          </div>
+          {fieldError("authorId") && <span className="error" role="alert">{fieldError("authorId")}</span>}
+        </div>
+
         {!initial && (
           <div className="quick-author-toggle">
             <button className="btn sm ghost" type="button" onClick={() => setShowNewAuthor((open) => !open)}>
@@ -102,7 +175,7 @@ export function BookAdminForm({ authors: availableAuthors, categories, initial }
         <small className="muted full">
           {initial
             ? `Endereço do livro: /livro/${initial.slug} (não muda ao editar o título).`
-            : "Livros novos começam como rascunho; publique depois na lista. O cadastro de capa e arquivo EPUB/PDF fica para uma etapa futura."}
+            : "Livros novos começam como rascunho. Depois de salvar, você poderá enviar a capa e o arquivo EPUB/PDF na edição."}
         </small>
       </form>
 

@@ -17,6 +17,7 @@ const bookSelect = {
   synopsis: true,
   c1: true,
   c2: true,
+  coverImageUrl: true,
   author: { select: { name: true, slug: true } },
 } as const;
 
@@ -33,6 +34,7 @@ type BookRow = {
   synopsis: string;
   c1: string;
   c2: string;
+  coverImageUrl: string | null;
   author: { name: string; slug: string };
 };
 
@@ -52,6 +54,7 @@ function toBook(row: BookRow): Book {
     synopsis: row.synopsis,
     c1: row.c1,
     c2: row.c2,
+    coverImageUrl: row.coverImageUrl,
   };
 }
 
@@ -60,6 +63,10 @@ export type LibraryBook = {
   progressPercent: number;
   acquiredAt: Date;
   lastReadAt: Date | null;
+  hasEbook: boolean;
+  ebookMimeType: string | null;
+  ebookOriginalName: string | null;
+  ebookSize: number | null;
   book: Book;
 };
 
@@ -72,7 +79,15 @@ export const listUserLibrary = cache(async (userId: string): Promise<LibraryBook
       progressPercent: true,
       acquiredAt: true,
       lastReadAt: true,
-      book: { select: bookSelect },
+      book: {
+        select: {
+          ...bookSelect,
+          ebookStorageKey: true,
+          ebookMimeType: true,
+          ebookOriginalName: true,
+          ebookSize: true,
+        },
+      },
     },
     orderBy: [{ updatedAt: "desc" }, { acquiredAt: "desc" }],
   });
@@ -82,6 +97,10 @@ export const listUserLibrary = cache(async (userId: string): Promise<LibraryBook
     progressPercent: row.progressPercent,
     acquiredAt: row.acquiredAt,
     lastReadAt: row.lastReadAt,
+    hasEbook: Boolean(row.book.ebookStorageKey),
+    ebookMimeType: row.book.ebookMimeType,
+    ebookOriginalName: row.book.ebookOriginalName,
+    ebookSize: row.book.ebookSize,
     book: toBook(row.book),
   }));
 });
@@ -96,7 +115,15 @@ export const getUserLibraryBook = cache(
         progressPercent: true,
         acquiredAt: true,
         lastReadAt: true,
-        book: { select: bookSelect },
+        book: {
+          select: {
+            ...bookSelect,
+            ebookStorageKey: true,
+            ebookMimeType: true,
+            ebookOriginalName: true,
+            ebookSize: true,
+          },
+        },
       },
     });
 
@@ -106,6 +133,10 @@ export const getUserLibraryBook = cache(
       progressPercent: row.progressPercent,
       acquiredAt: row.acquiredAt,
       lastReadAt: row.lastReadAt,
+      hasEbook: Boolean(row.book.ebookStorageKey),
+      ebookMimeType: row.book.ebookMimeType,
+      ebookOriginalName: row.book.ebookOriginalName,
+      ebookSize: row.book.ebookSize,
       book: toBook(row.book),
     };
   },

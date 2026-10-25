@@ -9,5 +9,12 @@ export type AuthorFormState = {
   fieldErrors?: Partial<Record<keyof AuthorFormValues, string>>;
   error?: string;
   success?: string;
-  savedAuthor?: { id: string; name: string; slug: string; bio: string; color: string };
+  savedAuthor?: {
+    id: string;
+    name: string;
+    slug: string;
+    bio: string;
+    color: string;
+    photoUrl: string | null;
+  };
 };

@@ -41,3 +41,7 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 /src/generated/prisma/
+
+# Uploads locais gerados pelo Admin (não versionar arquivos enviados)
+/storage/uploads/
+/storage/books/

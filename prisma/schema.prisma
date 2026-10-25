@@ -45,6 +45,7 @@ model Author {
   name      String   @db.VarChar(120)
   bio       String   @db.Text
   color     String   @db.VarChar(7)
+  photoUrl  String?  @db.VarChar(255)
   createdAt DateTime @default(now()) @db.DateTime(3)
   updatedAt DateTime @updatedAt @db.DateTime(3)
   books     Book[]
@@ -64,6 +65,11 @@ model Book {
   synopsis     String        @db.Text
   c1           String        @db.VarChar(7)
   c2           String        @db.VarChar(7)
+  coverImageUrl String?      @db.VarChar(255)
+  ebookStorageKey String?    @unique @db.VarChar(80)
+  ebookMimeType String?      @db.VarChar(100)
+  ebookOriginalName String?  @db.VarChar(255)
+  ebookSize    Int?
   // Avaliações demonstrativas; avaliações reais permanecem fora do escopo desta etapa.
   rating       Decimal       @default(0) @db.Decimal(2, 1)
   reviewCount  Int           @default(0)

@@ -17,6 +17,7 @@ export type Book = {
   synopsis: string;
   c1: string;
   c2: string;
+  coverImageUrl?: string | null;
 };
 
 export type Author = {
@@ -25,6 +26,7 @@ export type Author = {
   color: string;
   bio: string;
   bookCount?: number;
+  photoUrl?: string | null;
 };
 
 export const slugify = (s: string) =>

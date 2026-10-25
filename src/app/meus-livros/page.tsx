@@ -110,10 +110,13 @@ async function AuthenticatedBookshelf({
                       <Link className="btn sm" href={`/leitor/${encodeURIComponent(book.slug)}`}>
                         Abrir leitor
                       </Link>
+                      {item.hasEbook && (
+                        <a className="btn sm ghost" href={`/api/library/${encodeURIComponent(book.slug)}/file?download=1`}>
+                          Baixar {item.ebookMimeType === "application/pdf" ? "PDF" : "EPUB"}
+                        </a>
+                      )}
                     </div>
-                    <small className="muted">
-                      O arquivo digital ainda precisa ser cadastrado para leitura e download.
-                    </small>
+                    {!item.hasEbook && <small className="muted">O arquivo digital deste livro ainda não foi cadastrado.</small>}
                   </div>
                 </div>
               );
