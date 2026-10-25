@@ -1,29 +1,38 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import type { CSSProperties } from "react";
-import { AUTHORS, booksByAuthor, getAuthor, initials } from "@/lib/data";
+import { Suspense, type CSSProperties } from "react";
+import { initials } from "@/lib/data";
+import { getAuthorWithBooks } from "@/lib/catalog";
+import { DynamicMarker } from "@/components/DynamicMarker";
 import { BookCard } from "@/components/BookCard";
-
-export function generateStaticParams() {
-  return AUTHORS.map((a) => ({ slug: a.slug }));
-}
 
 export async function generateMetadata({
   params,
 }: PageProps<"/autor/[slug]">): Promise<Metadata> {
   const { slug } = await params;
-  const author = getAuthor(slug);
-  return author
-    ? { title: author.name, description: author.bio }
+  const found = await getAuthorWithBooks(slug);
+  return found
+    ? { title: found.author.name, description: found.author.bio }
     : { title: "Autor não encontrado" };
 }
 
-export default async function AuthorPage({ params }: PageProps<"/autor/[slug]">) {
-  const { slug } = await params;
-  const author = getAuthor(slug);
-  if (!author) notFound();
+export default function AuthorPage({ params }: PageProps<"/autor/[slug]">) {
+  return (
+    <>
+      <Suspense fallback={<p className="muted" aria-live="polite">Carregando autor…</p>}>
+        <AuthorDetail params={params} />
+      </Suspense>
+      <DynamicMarker />
+    </>
+  );
+}
 
-  const books = booksByAuthor(author.slug);
+async function AuthorDetail({ params }: Pick<PageProps<"/autor/[slug]">, "params">) {
+  const { slug } = await params;
+  const found = await getAuthorWithBooks(slug);
+  if (!found) notFound();
+
+  const { author, books } = found;
 
   return (
     <>

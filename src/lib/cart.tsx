@@ -1,16 +1,43 @@
 "use client";
 
-import { useMemo, useSyncExternalStore } from "react";
-import { BOOKS, type Book } from "@/lib/data";
+import { useSyncExternalStore } from "react";
+import type { Book } from "@/lib/data";
 
-// Carrinho no navegador: guarda só os slugs dos livros em localStorage e
-// compartilha o estado entre todos os componentes (useSyncExternalStore).
-// Os preços finais devem sempre ser recalculados no servidor na Entrega 5.
+// Carrinho no navegador (demonstrativo): guarda em localStorage apenas os dados
+// de EXIBIÇÃO do livro e compartilha o estado entre os componentes
+// (useSyncExternalStore). O navegador não é fonte confiável de preço: na
+// Entrega 5 o servidor recalcula valores a partir dos slugs, no banco.
 
-const STORAGE_KEY = "aartedepensar:cart";
-const EMPTY: string[] = [];
+export type CartItem = Pick<
+  Book,
+  "id" | "slug" | "title" | "author" | "category" | "price" | "c1" | "c2"
+>;
 
-let snapshot: string[] = EMPTY;
+const STORAGE_KEY = "aartedepensar:cart:v2";
+const EMPTY: CartItem[] = [];
+
+function toCartItem(book: Book): CartItem {
+  const { id, slug, title, author, category, price, c1, c2 } = book;
+  return { id, slug, title, author, category, price, c1, c2 };
+}
+
+function isCartItem(value: unknown): value is CartItem {
+  if (typeof value !== "object" || value === null) return false;
+  const v = value as Record<string, unknown>;
+  return (
+    typeof v.id === "string" &&
+    typeof v.slug === "string" &&
+    typeof v.title === "string" &&
+    typeof v.author === "string" &&
+    typeof v.category === "string" &&
+    typeof v.price === "number" &&
+    Number.isFinite(v.price) &&
+    typeof v.c1 === "string" &&
+    typeof v.c2 === "string"
+  );
+}
+
+let snapshot: CartItem[] = EMPTY;
 let initialized = false;
 const listeners = new Set<() => void>();
 
@@ -22,7 +49,7 @@ function init() {
     if (raw) {
       const parsed: unknown = JSON.parse(raw);
       if (Array.isArray(parsed)) {
-        snapshot = parsed.filter((s): s is string => typeof s === "string");
+        snapshot = parsed.filter(isCartItem);
       }
     }
   } catch {
@@ -30,7 +57,7 @@ function init() {
   }
 }
 
-function setSnapshot(next: string[]) {
+function setSnapshot(next: CartItem[]) {
   snapshot = next;
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
@@ -57,21 +84,16 @@ const getServerSnapshot = () => EMPTY;
 
 const actions = {
   add: (book: Book) => {
-    if (!snapshot.includes(book.slug)) setSnapshot([...snapshot, book.slug]);
+    if (!snapshot.some((item) => item.slug === book.slug)) {
+      setSnapshot([...snapshot, toCartItem(book)]);
+    }
   },
-  replaceWith: (book: Book) => setSnapshot([book.slug]),
-  remove: (slug: string) => setSnapshot(snapshot.filter((s) => s !== slug)),
+  replaceWith: (book: Book) => setSnapshot([toCartItem(book)]),
+  remove: (slug: string) => setSnapshot(snapshot.filter((item) => item.slug !== slug)),
   clear: () => setSnapshot([]),
 };
 
 export function useCart() {
-  const slugs = useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
-  const items = useMemo(
-    () =>
-      slugs
-        .map((slug) => BOOKS.find((b) => b.slug === slug))
-        .filter((b): b is Book => Boolean(b)),
-    [slugs],
-  );
+  const items = useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
   return { items, ...actions };
 }

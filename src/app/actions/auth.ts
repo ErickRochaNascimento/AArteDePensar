@@ -10,6 +10,16 @@ import { createSession, revokeCurrentSession } from "@/lib/session";
 
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
+// Hash fictício para gastar o mesmo tempo quando o e-mail não existe, evitando
+// revelar por tempo de resposta quais e-mails têm conta.
+let dummyHash: Promise<string> | undefined;
+function getDummyHash() {
+  dummyHash ??= argon2.hash("senha-ficticia-para-tempo-constante", {
+    type: argon2.argon2id,
+  });
+  return dummyHash;
+}
+
 function readText(formData: FormData, key: string) {
   const value = formData.get(key);
   return typeof value === "string" ? value : "";
@@ -91,12 +101,13 @@ export async function loginAction(
   }
 
   let passwordMatches = false;
-  if (user) {
-    try {
-      passwordMatches = await argon2.verify(user.passwordHash, password);
-    } catch {
-      passwordMatches = false;
-    }
+  try {
+    passwordMatches = await argon2.verify(
+      user ? user.passwordHash : await getDummyHash(),
+      password,
+    );
+  } catch {
+    passwordMatches = false;
   }
 
   if (!user || !passwordMatches) {

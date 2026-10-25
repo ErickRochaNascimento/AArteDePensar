@@ -1,20 +1,23 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
-import { AUTHORS, BOOKS, formatBRL } from "@/lib/data";
+import { formatBRL } from "@/lib/data";
 import { SalesChart } from "@/components/SalesChart";
+import { BookAdminForm } from "@/components/BookAdminForm";
+import { setBookPublishedAction } from "@/app/actions/catalog";
 import { requireAdmin } from "@/lib/auth";
+import { listAllBooksForAdmin, listAllCategories, listAuthorOptions } from "@/lib/catalog";
 
 export const metadata: Metadata = { title: "Painel da livraria" };
 
-// Pedidos de exemplo: [pedido, cliente, índice do livro, pagamento, valor, aprovado]
-const ORDERS: [string, string, number, string, number, boolean][] = [
-  ["#1187", "Camila R.", 0, "Pix", 24.9, true],
-  ["#1186", "Rafael M.", 2, "Cartão 3x", 39.9, true],
-  ["#1185", "Joana P.", 5, "Boleto", 14.9, false],
-  ["#1184", "Lucas T.", 7, "Pix", 34.9, true],
+// Pedidos de exemplo (viram dados reais na Entrega 5).
+const ORDERS: [string, string, string, string, number, boolean][] = [
+  ["#1187", "Camila R.", "O Farol de Santo Amaro", "Pix", 24.9, true],
+  ["#1186", "Rafael M.", "Algoritmos em Casa", "Cartão 3x", 39.9, true],
+  ["#1185", "Joana P.", "Pequeno Manual de Foco", "Boleto", 14.9, false],
+  ["#1184", "Lucas T.", "Receitas de Quintal", "Pix", 34.9, true],
 ];
 
-export default function AdminPage() {
+export default function AdminPage({ searchParams }: PageProps<"/admin">) {
   return (
     <Suspense
       fallback={
@@ -23,13 +26,27 @@ export default function AdminPage() {
         </p>
       }
     >
-      <AuthorizedAdminDashboard />
+      <AuthorizedAdminDashboard searchParams={searchParams} />
     </Suspense>
   );
 }
 
-async function AuthorizedAdminDashboard() {
+async function AuthorizedAdminDashboard({
+  searchParams,
+}: Pick<PageProps<"/admin">, "searchParams">) {
   await requireAdmin();
+
+  const { editar, salvo, erro } = await searchParams;
+  const [books, authors, categories] = await Promise.all([
+    listAllBooksForAdmin(),
+    listAuthorOptions(),
+    listAllCategories(),
+  ]);
+
+  const editing = typeof editar === "string" ? books.find((b) => b.id === editar) : undefined;
+  const publishedCount = books.filter((b) => b.published).length;
+  const draftCount = books.length - publishedCount;
+
   return (
     <div className="admin">
       <nav className="side" aria-label="Administração">
@@ -45,74 +62,129 @@ async function AuthorizedAdminDashboard() {
 
         <div className="kpis">
           <div className="kpi">
-            <small>Vendas em outubro</small>
+            <small>Vendas em outubro (exemplo)</small>
             <b>R$ 4.310</b>
             <span>+15,9% sobre setembro</span>
           </div>
           <div className="kpi">
-            <small>Pedidos</small>
+            <small>Pedidos (exemplo)</small>
             <b>187</b>
             <span>+22 sobre setembro</span>
           </div>
           <div className="kpi">
-            <small>Livros ativos</small>
-            <b>64</b>
-            <span>3 novos esta semana</span>
+            <small>Livros publicados</small>
+            <b>{publishedCount}</b>
+            <span>{draftCount} em rascunho</span>
           </div>
           <div className="kpi">
-            <small>Clientes</small>
+            <small>Clientes (exemplo)</small>
             <b>1.026</b>
             <span>+48 no mês</span>
           </div>
         </div>
 
-        <div className="two">
-          <div className="panel">
-            <h2 style={{ fontSize: 17 }}>Vendas por mês (R$)</h2>
-            <SalesChart />
-          </div>
+        <div className="panel">
+          <h2 style={{ fontSize: 17 }}>Vendas por mês (R$, exemplo)</h2>
+          <SalesChart />
+        </div>
 
-          <div className="panel" id="livros">
-            <h2 style={{ fontSize: 17 }}>Cadastrar livro</h2>
-            <form className="form">
-              <label className="full">
-                Título
-                <input type="text" placeholder="Ex.: O Farol de Santo Amaro" />
-              </label>
-              <label>
-                Autor
-                <select defaultValue="">
-                  <option value="" disabled>
-                    Selecione
-                  </option>
-                  {AUTHORS.map((a) => (
-                    <option key={a.slug}>{a.name}</option>
+        <div className="panel" id="livros">
+          <h2 style={{ fontSize: 17 }}>
+            {editing ? `Editar livro: ${editing.title}` : "Cadastrar livro"}
+          </h2>
+          {salvo === "1" && (
+            <p className="ok" role="status">
+              Livro salvo. Se ele ainda é rascunho, publique-o na lista abaixo.
+            </p>
+          )}
+          {erro === "publicacao" && (
+            <p className="error" role="alert">
+              Não foi possível alterar a publicação do livro. Tente novamente.
+            </p>
+          )}
+          {typeof editar === "string" && !editing && (
+            <p className="error" role="alert">
+              Livro não encontrado. Você pode cadastrar um novo abaixo.
+            </p>
+          )}
+          <BookAdminForm
+            key={editing?.id ?? "novo"}
+            authors={authors}
+            categories={categories}
+            initial={
+              editing
+                ? {
+                    id: editing.id,
+                    slug: editing.slug,
+                    title: editing.title,
+                    authorId: editing.authorId,
+                    year: String(editing.year),
+                    category: editing.category,
+                    pages: String(editing.pages),
+                    price: editing.price.toFixed(2).replace(".", ","),
+                    synopsis: editing.synopsis,
+                  }
+                : undefined
+            }
+          />
+        </div>
+
+        <div className="panel">
+          <h2 style={{ fontSize: 17 }}>Livros cadastrados</h2>
+          {books.length === 0 ? (
+            <p className="muted">
+              Nenhum livro cadastrado. Rode <code>npm run db:seed</code> para criar os exemplos ou
+              cadastre um acima.
+            </p>
+          ) : (
+            <div className="tbl">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Título</th>
+                    <th>Autor</th>
+                    <th>Categoria</th>
+                    <th>Preço</th>
+                    <th>Status</th>
+                    <th>Ações</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {books.map((b) => (
+                    <tr key={b.id}>
+                      <td>{b.title}</td>
+                      <td>{b.author}</td>
+                      <td>{b.category}</td>
+                      <td>{formatBRL(b.price)}</td>
+                      <td>
+                        <span className={b.published ? "pill" : "pill w"}>
+                          {b.published ? "Publicado" : "Rascunho"}
+                        </span>
+                      </td>
+                      <td>
+                        <div className="row-actions">
+                          <a className="btn sm ghost" href={`/admin?editar=${b.id}#livros`}>
+                            Editar
+                          </a>
+                          <form action={setBookPublishedAction}>
+                            <input type="hidden" name="id" value={b.id} />
+                            <input type="hidden" name="publish" value={String(!b.published)} />
+                            <button className="btn sm" type="submit">
+                              {b.published ? "Retirar" : "Publicar"}
+                            </button>
+                          </form>
+                        </div>
+                      </td>
+                    </tr>
                   ))}
-                </select>
-              </label>
-              <label>
-                Preço (R$)
-                <input type="text" inputMode="decimal" placeholder="24,90" />
-              </label>
-              <label className="drop">
-                Capa (JPG ou PNG)
-                <input type="file" accept="image/png,image/jpeg" />
-              </label>
-              <label className="drop">
-                Arquivo (EPUB ou PDF)
-                <input type="file" accept=".epub,application/epub+zip,application/pdf" />
-              </label>
-              <div className="full">
-                <button className="btn sm" type="button">
-                  Publicar livro
-                </button>
-              </div>
-            </form>
-          </div>
+                </tbody>
+              </table>
+            </div>
+          )}
         </div>
 
         <div className="panel" id="pedidos">
-          <h2 style={{ fontSize: 17 }}>Últimos pedidos</h2>
+          <h2 style={{ fontSize: 17 }}>Últimos pedidos (exemplo)</h2>
           <div className="tbl">
             <table>
               <thead>
@@ -126,11 +198,11 @@ async function AuthorizedAdminDashboard() {
                 </tr>
               </thead>
               <tbody>
-                {ORDERS.map(([id, client, book, method, value, ok]) => (
+                {ORDERS.map(([id, client, title, method, value, ok]) => (
                   <tr key={id}>
                     <td>{id}</td>
                     <td>{client}</td>
-                    <td>{BOOKS[book].title}</td>
+                    <td>{title}</td>
                     <td>{method}</td>
                     <td>{formatBRL(value)}</td>
                     <td>

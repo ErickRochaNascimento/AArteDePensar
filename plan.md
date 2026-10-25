@@ -17,7 +17,7 @@ Processar cadastro, login e logout no servidor; validar campos, usar Argon2id, m
 
 ## Entrega 2 — catálogo MySQL e metadados no Admin
 
-**Status:** escopo escolhido pelo usuário; alterações permanecem somente na pasta local, sem commit ou push.
+**Status:** implementada na pasta local, sem commit ou push. Falta aplicar a migration `catalog` e o seed no MySQL local e testar no navegador. Os carrosséis da página inicial (uma linha, rolagem automática, arrastar/deslizar e setas) foram adicionados nesta etapa.
 
 ### Resultado esperado
 

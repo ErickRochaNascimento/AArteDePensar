@@ -1,10 +1,12 @@
 "use client";
 
 import Link from "next/link";
+import type { ReactNode } from "react";
 import { useCart } from "@/lib/cart";
 import { BRAND } from "@/lib/config";
 
-export function Header() {
+// `account` vem do servidor (depende da sessão); o resto do cabeçalho é cliente.
+export function Header({ account }: { account: ReactNode }) {
   const { items } = useCart();
 
   return (
@@ -29,7 +31,7 @@ export function Header() {
         </form>
         <nav className="links" aria-label="Conta">
           <Link href="/meus-livros">Meus Livros</Link>
-          <Link href="/entrar">Entrar</Link>
+          {account}
           <Link href="/checkout">
             Carrinho (<b>{items.length}</b>)
           </Link>

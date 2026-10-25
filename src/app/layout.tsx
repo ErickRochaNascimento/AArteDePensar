@@ -1,6 +1,9 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { Bricolage_Grotesque, Figtree } from "next/font/google";
 import { BRAND, SITE_DESCRIPTION } from "@/lib/config";
+import { Suspense } from "react";
+import { AccountLinks } from "@/components/AccountLinks";
 import { Header } from "@/components/Header";
 import "./globals.css";
 
@@ -31,7 +34,13 @@ export default function RootLayout({
   return (
     <html lang="pt-BR" className={`${display.variable} ${body.variable}`}>
       <body>
-        <Header />
+        <Header
+          account={
+            <Suspense fallback={<Link href="/entrar">Entrar</Link>}>
+              <AccountLinks />
+            </Suspense>
+          }
+        />
         <main className="wrap main">{children}</main>
         <footer className="site-footer">
           <div className="wrap">

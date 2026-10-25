@@ -52,3 +52,22 @@ WHERE email = 'SEU_EMAIL_DE_ADMIN';
 Novas contas sempre começam como `USER`; não existe formulário público para conceder acesso administrativo. A página `/admin` exige uma sessão válida com papel `ADMIN`.
 
 Em uma hospedagem HTTPS, configure `AUTH_COOKIE_SECURE=true` no ambiente do servidor. Para desenvolvimento local em HTTP, mantenha `false`.
+
+## Catálogo de livros (Entrega 2)
+
+Depois da configuração acima, aplique a migration do catálogo e carregue os livros de exemplo. No PowerShell, na raiz do projeto:
+
+```powershell
+npm.cmd install
+npm.cmd run db:generate
+npm.cmd run db:deploy
+npm.cmd run db:seed
+```
+
+- `npm install` instala também o `tsx`, usado pelo seed.
+- `db:deploy` aplica a migration `catalog`, que cria as tabelas `authors` e `books`.
+- `db:seed` cria 6 autores e 8 livros de exemplo (já publicados). É seguro rodar de novo: ele só cria o que ainda não existe, pelo slug, e não sobrescreve o que você editou no Admin.
+
+No site, a página inicial, a busca, `/livro/[slug]` e `/autor/[slug]` leem esses dados do MySQL. Autores só aparecem na home se tiverem ao menos um livro publicado.
+
+No `/admin` (conta com papel `ADMIN`) você cadastra e edita título, autor, ano, categoria, páginas, preço e sinopse. Livros novos começam como **rascunho**; use **Publicar** na lista para que apareçam no catálogo. O endereço (`slug`) é criado a partir do título e não muda nas edições. Ainda não há upload de capa nem de arquivos EPUB/PDF.

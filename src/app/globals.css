@@ -24,8 +24,8 @@
     --surface: #152120;
     --fg: #e7f0ee;
     --muted: #9aaaa6;
-    --line: #1B2A4A;
-    --accent: #0F4C5C;
+    --line: #25362f;
+    --accent: #43c2aa;
     --accent-ink: #04201a;
     --soft: #1a2e2a;
     --hi: #e9b04f;
@@ -162,6 +162,27 @@ img {
   text-decoration: none;
   white-space: nowrap;
 }
+.links form {
+  display: inline;
+  margin: 0;
+}
+.links-user {
+  white-space: nowrap;
+  opacity: 0.9;
+}
+.link-btn {
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  font-weight: 500;
+  padding: 0;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.link-btn:hover {
+  text-decoration: underline;
+}
 .links a:hover,
 .sub a:hover {
   text-decoration: underline;
@@ -220,6 +241,106 @@ img {
   gap: 18px;
 }
 
+/* ===== Carrossel (uma linha: automático, arrastar/deslizar e setas) ===== */
+.carousel {
+  --gap: 18px;
+  --per-view: 2;
+  display: flex;
+  flex-direction: column;
+}
+@media (min-width: 520px) {
+  .carousel { --per-view: 3; }
+}
+@media (min-width: 760px) {
+  .carousel { --per-view: 4; }
+}
+@media (min-width: 1000px) {
+  .carousel { --per-view: 6; }
+}
+.carousel--authors {
+  --gap: 22px;
+  --per-view: 3;
+}
+@media (min-width: 520px) {
+  .carousel--authors { --per-view: 4; }
+}
+@media (min-width: 760px) {
+  .carousel--authors { --per-view: 5; }
+}
+@media (min-width: 1000px) {
+  .carousel--authors { --per-view: 7; }
+}
+.carousel-track {
+  display: flex;
+  gap: var(--gap);
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  scroll-snap-type: x mandatory;
+  scrollbar-width: none;
+  padding: 4px 2px 10px;
+  cursor: grab;
+}
+.carousel-track::-webkit-scrollbar {
+  display: none;
+}
+.carousel-track.is-dragging {
+  cursor: grabbing;
+  scroll-snap-type: none;
+  scroll-behavior: auto;
+  user-select: none;
+}
+.carousel-item {
+  flex: 0 0 calc((100% - (var(--per-view) - 1) * var(--gap)) / var(--per-view));
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  scroll-snap-align: start;
+}
+.carousel-item > .card {
+  flex: 1;
+}
+.carousel-foot {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  margin-top: 2px;
+}
+.carousel-arrows {
+  display: flex;
+  gap: 8px;
+}
+.carousel-btn {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  border: 1px solid var(--line);
+  background: var(--surface);
+  color: var(--fg);
+  font-size: 26px;
+  line-height: 1;
+  display: grid;
+  place-items: center;
+  padding: 0 0 3px;
+  cursor: pointer;
+}
+.carousel-btn:hover {
+  background: var(--soft);
+}
+.carousel-pause {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  border: 0;
+  background: none;
+  color: var(--muted);
+  font-size: 12.5px;
+  padding: 6px 4px;
+  cursor: pointer;
+}
+.carousel-pause:hover {
+  color: var(--fg);
+}
 /* ===== Capas geradas em CSS ===== */
 .cover {
   aspect-ratio: 2 / 3;
@@ -302,18 +423,11 @@ img {
 }
 
 /* ===== Autores ===== */
-.authors {
-  display: flex;
-  gap: 26px;
-  overflow-x: auto;
-  padding-bottom: 6px;
-}
 .author {
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 8px;
-  min-width: 112px;
   text-align: center;
   text-decoration: none;
   color: inherit;
@@ -415,6 +529,29 @@ label {
   .error {
     color: #ff8a80;
   }
+}
+.ok {
+  color: var(--ok);
+  font-size: 13.5px;
+  margin: 0;
+}
+.form-actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.row-actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+.row-actions form {
+  margin: 0;
+}
+input[aria-invalid="true"],
+select[aria-invalid="true"],
+textarea[aria-invalid="true"] {
+  border-color: #b3261e;
 }
 
 /* ===== Detalhe do livro ===== */

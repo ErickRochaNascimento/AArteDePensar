@@ -1,20 +1,15 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
 import Link from "next/link";
-import { BOOKS } from "@/lib/data";
+import { listPublishedBooks } from "@/lib/catalog";
 import { Cover } from "@/components/Cover";
 import { logoutAction } from "@/app/actions/auth";
 import { requireUser } from "@/lib/auth";
 
 export const metadata: Metadata = { title: "Meus Livros" };
 
-// Dados de exemplo: [índice do livro, % lido]. Na Entrega 3 vêm das compras do usuário.
-const SHELF: [number, number][] = [
-  [0, 62],
-  [2, 18],
-  [5, 100],
-  [6, 0],
-];
+// Progresso de leitura de exemplo. Na Entrega 3 a estante vem das compras do usuário.
+const DEMO_PROGRESS = [62, 18, 100, 0];
 
 export default function MeusLivrosPage() {
   return (
@@ -34,6 +29,7 @@ export default function MeusLivrosPage() {
 
 async function AuthenticatedBookshelf() {
   const user = await requireUser();
+  const shelf = (await listPublishedBooks()).slice(0, DEMO_PROGRESS.length);
   return (
     <div className="prof">
       <nav className="side" aria-label="Área do cliente">
@@ -49,12 +45,12 @@ async function AuthenticatedBookshelf() {
       <div>
         <h1 style={{ fontSize: 26, marginBottom: 6 }}>Olá, {user.name}</h1>
         <p className="muted" style={{ margin: "0 0 20px" }}>
-          Você tem {SHELF.length} livros na sua estante.
+          Você tem {shelf.length} {shelf.length === 1 ? "livro" : "livros"} na sua estante.
         </p>
 
         <div className="shelf">
-          {SHELF.map(([i, pct]) => {
-            const b = BOOKS[i];
+          {shelf.map((b, i) => {
+            const pct = DEMO_PROGRESS[i];
             return (
               <div className="own" key={b.id}>
                 <Cover book={b} />
