@@ -20,3 +20,8 @@
 - Livros novos começam como rascunho. O Admin pode publicar ou retirar do catálogo um livro; somente livros publicados aparecem na área pública. Não há exclusão de livro nesta etapa.
 - Os formulários validam os campos no servidor e exibem mensagens úteis para erros; não exibem controles de upload, pois arquivos e capas enviados ainda não fazem parte desta entrega.
 - O carrinho e o checkout permanecem demonstrativos: esta etapa não cria pedidos, cobra pagamento nem libera EPUB/PDF.
+
+## Área do cliente
+
+- `/meus-livros` tem pesquisa por título ou autor na estante; `/meus-livros/dados` é uma página própria (somente leitura por enquanto), acessada por Meus livros.
+- A edição dos dados da conta e a estante real (compras) ficam para a Entrega 3.

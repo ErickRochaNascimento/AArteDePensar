@@ -6,6 +6,7 @@ import argon2 from "argon2";
 import { redirect } from "next/navigation";
 import { getDb } from "@/lib/db";
 import type { AuthActionState } from "@/lib/auth-types";
+import { safeNext } from "@/lib/safe-redirect";
 import { createSession, revokeCurrentSession } from "@/lib/session";
 
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -76,7 +77,7 @@ export async function registerAction(
     };
   }
 
-  redirect("/meus-livros");
+  redirect(safeNext(formData.get("next")));
 }
 
 export async function loginAction(
@@ -120,7 +121,7 @@ export async function loginAction(
     return { error: "Não foi possível iniciar a sessão. Tente novamente." };
   }
 
-  redirect("/meus-livros");
+  redirect(safeNext(formData.get("next")));
 }
 
 export async function logoutAction() {

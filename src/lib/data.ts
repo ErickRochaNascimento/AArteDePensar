@@ -35,6 +35,13 @@ export const slugify = (s: string) =>
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/(^-|-$)/g, "");
 
+/** Minúsculas e sem acentos, para comparar textos em buscas. */
+export const normalizeText = (s: string) =>
+  s
+    .normalize("NFD")
+    .replace(/[̀-ͯ]/g, "")
+    .toLowerCase();
+
 export const initials = (name: string) =>
   name
     .split(" ")

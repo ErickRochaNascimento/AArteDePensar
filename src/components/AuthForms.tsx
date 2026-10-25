@@ -6,7 +6,7 @@ import type { AuthActionState } from "@/lib/auth-types";
 
 const INITIAL_STATE: AuthActionState = {};
 
-export function AuthForms() {
+export function AuthForms({ next }: { next?: string }) {
   const [loginState, loginFormAction, loginPending] = useActionState(
     loginAction,
     INITIAL_STATE,
@@ -19,6 +19,7 @@ export function AuthForms() {
   return (
     <div className="auth">
       <form action={loginFormAction}>
+        {next && <input type="hidden" name="next" value={next} />}
         <h2 style={{ fontSize: 24 }}>Entrar</h2>
         <label>
           E-mail
@@ -55,6 +56,7 @@ export function AuthForms() {
       </form>
 
       <form action={registerFormAction}>
+        {next && <input type="hidden" name="next" value={next} />}
         <h2 style={{ fontSize: 24 }}>Criar conta</h2>
         <label>
           Nome completo

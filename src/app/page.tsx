@@ -85,7 +85,7 @@ async function Authors() {
   return (
     <section className="sec" id="autores">
       <h2>Autores</h2>
-      <Carousel label="Autores" variant="authors">
+      <Carousel label="Autores" variant="authors" loop>
         {authors.map((a) => (
           <AuthorAvatar key={a.slug} author={a} />
         ))}

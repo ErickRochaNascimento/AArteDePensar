@@ -4,6 +4,7 @@ import {
   Children,
   useCallback,
   useEffect,
+  useLayoutEffect,
   useRef,
   useState,
   useSyncExternalStore,
@@ -15,15 +16,21 @@ type Props = {
   /** Nome do carrossel para leitores de tela (ex.: "Mais vendidos"). */
   label: string;
   children: ReactNode;
-  /** Quantos itens cabem por vez; "authors" usa itens menores. */
+  /** "authors" usa itens menores. */
   variant?: "books" | "authors";
   /** Tempo entre um avanço automático e outro, em ms. */
   intervalMs?: number;
+  /**
+   * Laço infinito: repete os itens para que o carrossel sempre se mova, mesmo
+   * quando todos cabem na tela (ex.: poucos autores).
+   */
+  loop?: boolean;
 };
 
 const EDGE = 4; // tolerância (px) ao comparar posições de rolagem
 const DRAG_THRESHOLD = 6; // px de arrasto antes de virar "arrastar"
 const IDLE_AFTER_INTERACTION = 4000; // ms sem avançar após o usuário mexer
+const MAX_PER_VIEW = 7; // maior número de itens visíveis (ver CSS)
 const REDUCED_MOTION_QUERY = "(prefers-reduced-motion: reduce)";
 
 function subscribeReducedMotion(onChange: () => void) {
@@ -33,20 +40,26 @@ function subscribeReducedMotion(onChange: () => void) {
 }
 
 // Carrossel de uma única linha. Movimento por:
-// - rolagem automática (pausa com mouse em cima, foco, toque, botão de pausa
-//   e para quem prefere menos movimento);
+// - rolagem automática (pausa com mouse em cima, foco e toque);
 // - arrastar com o mouse e deslizar com o dedo (rolagem nativa + snap);
-// - setas anterior/próximo, que dão a volta ao chegar no fim.
-export function Carousel({ label, children, variant = "books", intervalMs = 4500 }: Props) {
+// - setas anterior/próximo nas laterais, no meio do carrossel.
+// Quem prefere menos movimento (configuração do sistema) continua com a
+// rolagem automática, mas os avanços são instantâneos, sem animação suave.
+export function Carousel({
+  label,
+  children,
+  variant = "books",
+  intervalMs = 4500,
+  loop = false,
+}: Props) {
   const trackRef = useRef<HTMLDivElement>(null);
   const [overflowing, setOverflowing] = useState(false);
-  const [playing, setPlaying] = useState(true);
+  const [dragging, setDragging] = useState(false);
   const reducedMotion = useSyncExternalStore(
     subscribeReducedMotion,
     () => window.matchMedia(REDUCED_MOTION_QUERY).matches,
     () => false,
   );
-  const [dragging, setDragging] = useState(false);
 
   const hoverRef = useRef(false);
   const focusRef = useRef(false);
@@ -54,14 +67,47 @@ export function Carousel({ label, children, variant = "books", intervalMs = 4500
   const lastInteractionRef = useRef(0);
   const dragRef = useRef({ active: false, moved: false, startX: 0, startScroll: 0, pointerId: -1 });
   const suppressClickRef = useRef(false);
+  const settleTimerRef = useRef<number | undefined>(undefined);
 
   const items = Children.toArray(children);
+  const count = items.length;
+  const looping = loop && count >= 2;
+  // Cópias suficientes para nunca faltar item dos dois lados; a do meio é a "real".
+  const copies = looping ? Math.max(3, Math.ceil((MAX_PER_VIEW * 3) / count)) : 1;
+  const realSet = 1;
+
+  const setWidth = useCallback(() => {
+    const track = trackRef.current;
+    const first = track?.children[0] as HTMLElement | undefined;
+    const next = track?.children[count] as HTMLElement | undefined;
+    if (!first || !next) return 0;
+    return next.offsetLeft - first.offsetLeft;
+  }, [count]);
+
+  // Mantém a rolagem dentro da cópia do meio sem que se perceba o salto.
+  const normalize = useCallback(() => {
+    const track = trackRef.current;
+    if (!track || !looping) return;
+    const width = setWidth();
+    if (width <= 0) return;
+    const x = track.scrollLeft;
+    if (x < width * 0.5) track.scrollLeft = x + width;
+    else if (x >= width * 1.5) track.scrollLeft = x - width;
+  }, [looping, setWidth]);
 
   const measure = useCallback(() => {
     const track = trackRef.current;
     if (!track) return;
-    setOverflowing(track.scrollWidth - track.clientWidth > EDGE);
-  }, []);
+    setOverflowing(looping || track.scrollWidth - track.clientWidth > EDGE);
+    normalize();
+  }, [looping, normalize]);
+
+  // Posição inicial do laço: início da cópia real.
+  useLayoutEffect(() => {
+    const track = trackRef.current;
+    if (!track || !looping) return;
+    track.scrollLeft = setWidth() * realSet;
+  }, [looping, setWidth]);
 
   // Detecta se há mais itens do que cabem na tela (e reage a redimensionamentos).
   useEffect(() => {
@@ -70,9 +116,20 @@ export function Carousel({ label, children, variant = "books", intervalMs = 4500
     const observer = new ResizeObserver(measure);
     observer.observe(track);
     return () => observer.disconnect();
-  }, [measure, items.length]);
+  }, [measure, count]);
 
-  const behavior = reducedMotion ? "auto" : "smooth";
+  // Cópias do laço não entram na ordem de tabulação nem na leitura de tela.
+  useEffect(() => {
+    const track = trackRef.current;
+    if (!track || !looping) return;
+    track
+      .querySelectorAll<HTMLElement>("[data-clone] a, [data-clone] button")
+      .forEach((el) => el.setAttribute("tabindex", "-1"));
+  }, [looping, count, copies]);
+
+  useEffect(() => () => window.clearTimeout(settleTimerRef.current), []);
+
+  const behavior: ScrollBehavior = reducedMotion ? "auto" : "smooth";
 
   const stepSize = useCallback(() => {
     const track = trackRef.current;
@@ -88,9 +145,14 @@ export function Carousel({ label, children, variant = "books", intervalMs = 4500
     (direction: 1 | -1, amount: "item" | "page") => {
       const track = trackRef.current;
       if (!track) return;
-      const max = track.scrollWidth - track.clientWidth;
       const size = stepSize();
       const delta = (amount === "item" ? size.item : size.page) * direction;
+
+      if (looping) {
+        track.scrollBy({ left: delta, behavior });
+        return;
+      }
+      const max = track.scrollWidth - track.clientWidth;
       if (direction === 1 && track.scrollLeft >= max - EDGE) {
         track.scrollTo({ left: 0, behavior });
       } else if (direction === -1 && track.scrollLeft <= EDGE) {
@@ -99,7 +161,7 @@ export function Carousel({ label, children, variant = "books", intervalMs = 4500
         track.scrollBy({ left: delta, behavior });
       }
     },
-    [behavior, stepSize],
+    [behavior, looping, stepSize],
   );
 
   const markInteraction = () => {
@@ -107,7 +169,7 @@ export function Carousel({ label, children, variant = "books", intervalMs = 4500
   };
 
   // Rolagem automática.
-  const autoplay = playing && overflowing && !reducedMotion;
+  const autoplay = overflowing;
   useEffect(() => {
     if (!autoplay) return;
     const timer = window.setInterval(() => {
@@ -119,6 +181,13 @@ export function Carousel({ label, children, variant = "books", intervalMs = 4500
     }, intervalMs);
     return () => window.clearInterval(timer);
   }, [autoplay, intervalMs, move]);
+
+  // Quando a rolagem para, o laço volta para a cópia do meio.
+  const onScroll = () => {
+    if (!looping) return;
+    window.clearTimeout(settleTimerRef.current);
+    settleTimerRef.current = window.setTimeout(normalize, 140);
+  };
 
   // Arrastar com o mouse (toque usa a rolagem nativa do navegador).
   const onPointerDown = (event: ReactPointerEvent<HTMLDivElement>) => {
@@ -162,11 +231,12 @@ export function Carousel({ label, children, variant = "books", intervalMs = 4500
       }
       setDragging(false);
       markInteraction();
+      normalize();
     }
     dragRef.current = { ...drag, active: false, moved: false };
   };
 
-  const controlsHidden = !overflowing;
+  const showControls = overflowing;
 
   return (
     <div
@@ -188,60 +258,57 @@ export function Carousel({ label, children, variant = "books", intervalMs = 4500
         markInteraction();
       }}
     >
-      <div
-        ref={trackRef}
-        className={dragging ? "carousel-track is-dragging" : "carousel-track"}
-        aria-live={autoplay ? "off" : "polite"}
-        onPointerDown={onPointerDown}
-        onPointerMove={onPointerMove}
-        onPointerUp={endDrag}
-        onPointerCancel={endDrag}
-        onClickCapture={(event) => {
-          if (suppressClickRef.current) {
-            event.preventDefault();
-            event.stopPropagation();
-          }
-        }}
-        onDragStart={(event) => event.preventDefault()}
-        onTouchStart={() => {
-          touchRef.current = true;
-          markInteraction();
-        }}
-        onTouchEnd={() => {
-          touchRef.current = false;
-          markInteraction();
-        }}
-        onTouchCancel={() => {
-          touchRef.current = false;
-        }}
-        onWheel={markInteraction}
-      >
-        {items.map((child, index) => (
-          <div className="carousel-item" key={index}>
-            {child}
-          </div>
-        ))}
-      </div>
-
-      {!controlsHidden && (
-        <div className="carousel-foot">
-          {!reducedMotion ? (
-            <button
-              type="button"
-              className="carousel-pause"
-              aria-pressed={!playing}
-              onClick={() => setPlaying((value) => !value)}
-            >
-              <span aria-hidden="true">{playing ? "❚❚" : "▶"}</span>{" "}
-              {playing ? "Pausar rolagem automática" : "Retomar rolagem automática"}
-            </button>
-          ) : (
-            <span />
+      <div className="carousel-stage">
+        <div
+          ref={trackRef}
+          className={dragging ? "carousel-track is-dragging" : "carousel-track"}
+          aria-live={autoplay ? "off" : "polite"}
+          onScroll={onScroll}
+          onPointerDown={onPointerDown}
+          onPointerMove={onPointerMove}
+          onPointerUp={endDrag}
+          onPointerCancel={endDrag}
+          onClickCapture={(event) => {
+            if (suppressClickRef.current) {
+              event.preventDefault();
+              event.stopPropagation();
+            }
+          }}
+          onDragStart={(event) => event.preventDefault()}
+          onTouchStart={() => {
+            touchRef.current = true;
+            markInteraction();
+          }}
+          onTouchEnd={() => {
+            touchRef.current = false;
+            markInteraction();
+          }}
+          onTouchCancel={() => {
+            touchRef.current = false;
+          }}
+          onWheel={markInteraction}
+        >
+          {Array.from({ length: copies }).flatMap((_, copy) =>
+            items.map((child, index) => {
+              const clone = looping && copy !== realSet;
+              return (
+                <div
+                  className="carousel-item"
+                  key={`${copy}-${index}`}
+                  {...(clone ? { "data-clone": "", "aria-hidden": true } : {})}
+                >
+                  {child}
+                </div>
+              );
+            }),
           )}
-          <div className="carousel-arrows">
+        </div>
+
+        {showControls && (
+          <>
             <button
               type="button"
-              className="carousel-btn"
+              className="carousel-btn carousel-btn--prev"
               aria-label={`${label}: anterior`}
               onClick={() => {
                 markInteraction();
@@ -252,7 +319,7 @@ export function Carousel({ label, children, variant = "books", intervalMs = 4500
             </button>
             <button
               type="button"
-              className="carousel-btn"
+              className="carousel-btn carousel-btn--next"
               aria-label={`${label}: próximo`}
               onClick={() => {
                 markInteraction();
@@ -261,9 +328,10 @@ export function Carousel({ label, children, variant = "books", intervalMs = 4500
             >
               <span aria-hidden="true">›</span>
             </button>
-          </div>
-        </div>
-      )}
+          </>
+        )}
+      </div>
+
     </div>
   );
 }
