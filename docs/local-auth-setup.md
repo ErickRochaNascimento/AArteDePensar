@@ -29,7 +29,7 @@ npm.cmd run db:generate
 npm.cmd run db:deploy
 ```
 
-`db:deploy` aplica a migration SQL já preparada e cria as tabelas `users` e `sessions` no banco local `livraria`, sem criar um banco shadow. Se a migração indicar outro banco ou uma URL diferente, pare e confira o `.env` antes de repetir.
+`db:deploy` aplica as migrations versionadas que ainda faltarem no banco local `livraria`, sem criar um banco shadow. Elas incluem as tabelas de autenticação, catálogo e biblioteca. Se a migração indicar outro banco ou uma URL diferente, pare e confira o `.env` antes de repetir.
 
 `db:migrate` é para desenvolver migrations novas; ele usa um banco shadow e exige permissões adicionais ou uma base shadow configurada. Não use esse comando para aplicar a migration inicial enquanto o usuário MySQL não estiver configurado para isso.
 
@@ -67,6 +67,10 @@ npm.cmd run db:seed
 - `npm install` instala também o `tsx`, usado pelo seed.
 - `db:deploy` aplica a migration `catalog`, que cria as tabelas `authors` e `books`.
 - `db:seed` cria 6 autores e 8 livros de exemplo (já publicados). É seguro rodar de novo: ele só cria o que ainda não existe, pelo slug, e não sobrescreve o que você editou no Admin.
+
+## Biblioteca (Entrega 3)
+
+A migration `customer_library` cria a tabela `library_items`, que relaciona um usuário a um livro e guarda o progresso de leitura. A estante consulta apenas essas relações; o seed não cria compras nem concede livros aos usuários. Na Entrega 5, o checkout poderá registrar o acesso somente após confirmação de pagamento no servidor. Até que arquivos EPUB/PDF reais sejam cadastrados, leitura e download ficam indisponíveis.
 
 No site, a página inicial, a busca, `/livro/[slug]` e `/autor/[slug]` leem esses dados do MySQL. Autores só aparecem na home se tiverem ao menos um livro publicado.
 

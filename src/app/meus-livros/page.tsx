@@ -1,16 +1,13 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
 import Link from "next/link";
-import { listPublishedBooks } from "@/lib/catalog";
-import { normalizeText } from "@/lib/data";
 import { AccountNav } from "@/components/AccountNav";
 import { Cover } from "@/components/Cover";
 import { requireUser } from "@/lib/auth";
+import { normalizeText } from "@/lib/data";
+import { listUserLibrary } from "@/lib/library";
 
 export const metadata: Metadata = { title: "Meus Livros" };
-
-// Progresso de leitura de exemplo. Na Entrega 3 a estante vem das compras do usuário.
-const DEMO_PROGRESS = [62, 18, 100, 0];
 
 export default function MeusLivrosPage({ searchParams }: PageProps<"/meus-livros">) {
   return (
@@ -34,15 +31,11 @@ async function AuthenticatedBookshelf({
   const user = await requireUser();
   const { q } = await searchParams;
   const term = typeof q === "string" ? q.trim().slice(0, 100) : "";
-
-  const owned = (await listPublishedBooks())
-    .slice(0, DEMO_PROGRESS.length)
-    .map((book, i) => ({ book, pct: DEMO_PROGRESS[i] }));
-
+  const library = await listUserLibrary(user.id);
   const needle = normalizeText(term);
   const shelf = needle
-    ? owned.filter(({ book }) => normalizeText(`${book.title} ${book.author}`).includes(needle))
-    : owned;
+    ? library.filter(({ book }) => normalizeText(`${book.title} ${book.author}`).includes(needle))
+    : library;
 
   return (
     <div className="prof">
@@ -51,7 +44,7 @@ async function AuthenticatedBookshelf({
       <div>
         <h1 style={{ fontSize: 26, marginBottom: 6 }}>Olá, {user.name}</h1>
         <p className="muted" style={{ margin: "0 0 16px" }}>
-          Você tem {owned.length} {owned.length === 1 ? "livro" : "livros"} na sua estante.
+          Você tem {library.length} {library.length === 1 ? "livro" : "livros"} na sua estante.
         </p>
 
         <form className="shelf-search" action="/meus-livros" method="get" role="search">
@@ -86,41 +79,45 @@ async function AuthenticatedBookshelf({
           <p className="muted">
             {term
               ? "Nenhum livro da sua estante corresponde à pesquisa."
-              : "Sua estante está vazia. Quando você comprar um livro, ele aparece aqui."}
+              : "Sua estante está vazia. Livros serão liberados após confirmação de compra na etapa de checkout."}
           </p>
         ) : (
           <div className="shelf">
-            {shelf.map(({ book: b, pct }) => (
-              <div className="own" key={b.id}>
-                <Cover book={b} />
-                <div>
-                  <b>{b.title}</b>
-                  <small className="muted">{b.author}</small>
-                  <div
-                    className="prog"
-                    role="progressbar"
-                    aria-valuenow={pct}
-                    aria-valuemin={0}
-                    aria-valuemax={100}
-                    aria-label={`${pct}% lido`}
-                  >
-                    <b style={{ width: `${pct}%` }} />
-                  </div>
-                  <small className="muted">
-                    {pct === 0 ? "Não iniciado" : pct === 100 ? "Concluído" : `${pct}% lido`}
-                  </small>
-                  <div className="acts">
-                    <Link className="btn sm" href={`/leitor/${b.slug}`}>
-                      {pct ? "Continuar" : "Ler online"}
-                    </Link>
-                    {/* Entrega 3: link para a rota protegida de download */}
-                    <button type="button" className="btn sm ghost">
-                      Baixar
-                    </button>
+            {shelf.map((item) => {
+              const { book } = item;
+              const pct = item.progressPercent;
+
+              return (
+                <div className="own" key={item.libraryItemId}>
+                  <Cover book={book} />
+                  <div>
+                    <b>{book.title}</b>
+                    <small className="muted">{book.author}</small>
+                    <div
+                      className="prog"
+                      role="progressbar"
+                      aria-valuenow={pct}
+                      aria-valuemin={0}
+                      aria-valuemax={100}
+                      aria-label={`${pct}% lido`}
+                    >
+                      <b style={{ width: `${pct}%` }} />
+                    </div>
+                    <small className="muted">
+                      {pct === 0 ? "Não iniciado" : pct === 100 ? "Concluído" : `${pct}% lido`}
+                    </small>
+                    <div className="acts">
+                      <Link className="btn sm" href={`/leitor/${encodeURIComponent(book.slug)}`}>
+                        Abrir leitor
+                      </Link>
+                    </div>
+                    <small className="muted">
+                      O arquivo digital ainda precisa ser cadastrado para leitura e download.
+                    </small>
                   </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
 

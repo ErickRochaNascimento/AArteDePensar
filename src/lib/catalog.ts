@@ -189,6 +189,41 @@ export async function listAuthorOptions(): Promise<{ id: string; name: string }[
   });
 }
 
+export type AdminAuthor = {
+  id: string;
+  slug: string;
+  name: string;
+  bio: string;
+  color: string;
+  publishedBookCount: number;
+  totalBookCount: number;
+};
+
+export async function listAllAuthorsForAdmin(): Promise<AdminAuthor[]> {
+  const rows = await getDb().author.findMany({
+    select: {
+      id: true,
+      slug: true,
+      name: true,
+      bio: true,
+      color: true,
+      _count: { select: { books: true } },
+      books: { where: { published: true }, select: { id: true } },
+    },
+    orderBy: { name: "asc" },
+  });
+
+  return rows.map((author) => ({
+    id: author.id,
+    slug: author.slug,
+    name: author.name,
+    bio: author.bio,
+    color: author.color,
+    publishedBookCount: author.books.length,
+    totalBookCount: author._count.books,
+  }));
+}
+
 export async function listAllCategories(): Promise<string[]> {
   const rows = await getDb().book.findMany({
     select: { category: true },

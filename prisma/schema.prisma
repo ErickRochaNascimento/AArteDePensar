@@ -13,14 +13,15 @@ enum UserRole {
 }
 
 model User {
-  id           String    @id @default(cuid()) @db.VarChar(30)
-  name         String    @db.VarChar(120)
-  email        String    @unique @db.VarChar(191)
-  passwordHash String    @db.VarChar(255)
-  role         UserRole  @default(USER)
-  createdAt    DateTime  @default(now()) @db.DateTime(3)
-  updatedAt    DateTime  @updatedAt @db.DateTime(3)
+  id           String        @id @default(cuid()) @db.VarChar(30)
+  name         String        @db.VarChar(120)
+  email        String        @unique @db.VarChar(191)
+  passwordHash String        @db.VarChar(255)
+  role         UserRole      @default(USER)
+  createdAt    DateTime      @default(now()) @db.DateTime(3)
+  updatedAt    DateTime      @updatedAt @db.DateTime(3)
   sessions     Session[]
+  libraryItems LibraryItem[]
 
   @@map("users")
 }
@@ -52,26 +53,46 @@ model Author {
 }
 
 model Book {
-  id          String   @id @default(cuid()) @db.VarChar(30)
-  slug        String   @unique @db.VarChar(160)
-  title       String   @db.VarChar(160)
-  authorId    String   @db.VarChar(30)
-  year        Int
-  category    String   @db.VarChar(60)
-  pages       Int
-  price       Decimal  @db.Decimal(10, 2)
-  synopsis    String   @db.Text
-  c1          String   @db.VarChar(7)
-  c2          String   @db.VarChar(7)
-  // Avaliações demonstrativas; as avaliações reais são um item Extra (Entrega 3).
-  rating      Decimal  @default(0) @db.Decimal(2, 1)
-  reviewCount Int      @default(0)
-  published   Boolean  @default(false)
-  createdAt   DateTime @default(now()) @db.DateTime(3)
-  updatedAt   DateTime @updatedAt @db.DateTime(3)
-  author      Author   @relation(fields: [authorId], references: [id], onDelete: Restrict)
+  id           String        @id @default(cuid()) @db.VarChar(30)
+  slug         String        @unique @db.VarChar(160)
+  title        String        @db.VarChar(160)
+  authorId     String        @db.VarChar(30)
+  year         Int
+  category     String        @db.VarChar(60)
+  pages        Int
+  price        Decimal       @db.Decimal(10, 2)
+  synopsis     String        @db.Text
+  c1           String        @db.VarChar(7)
+  c2           String        @db.VarChar(7)
+  // Avaliações demonstrativas; avaliações reais permanecem fora do escopo desta etapa.
+  rating       Decimal       @default(0) @db.Decimal(2, 1)
+  reviewCount  Int           @default(0)
+  published    Boolean       @default(false)
+  createdAt    DateTime      @default(now()) @db.DateTime(3)
+  updatedAt    DateTime      @updatedAt @db.DateTime(3)
+  author       Author        @relation(fields: [authorId], references: [id], onDelete: Restrict)
+  libraryItems LibraryItem[]
 
   @@index([authorId])
   @@index([published, category])
   @@map("books")
+}
+
+// A Entrega 5 cria/atualiza este registro somente após confirmação de pagamento no servidor.
+model LibraryItem {
+  id              String    @id @default(cuid()) @db.VarChar(30)
+  userId          String    @db.VarChar(30)
+  bookId          String    @db.VarChar(30)
+  progressPercent Int       @default(0)
+  acquiredAt      DateTime  @default(now()) @db.DateTime(3)
+  lastReadAt      DateTime? @db.DateTime(3)
+  createdAt       DateTime  @default(now()) @db.DateTime(3)
+  updatedAt       DateTime  @updatedAt @db.DateTime(3)
+  user            User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  book            Book      @relation(fields: [bookId], references: [id], onDelete: Restrict)
+
+  @@unique([userId, bookId])
+  @@index([userId, acquiredAt])
+  @@index([bookId])
+  @@map("library_items")
 }

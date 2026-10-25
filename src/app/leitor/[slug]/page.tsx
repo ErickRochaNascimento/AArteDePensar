@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { Suspense } from "react";
 import { requireUser } from "@/lib/auth";
 import { getPublishedBook } from "@/lib/catalog";
+import { getUserLibraryBook } from "@/lib/library";
 import { DynamicMarker } from "@/components/DynamicMarker";
 import { ReaderClient } from "@/components/ReaderClient";
 
@@ -27,12 +28,11 @@ export default function LeitorPage({ params }: PageProps<"/leitor/[slug]">) {
 
 async function Reader({ params }: Pick<PageProps<"/leitor/[slug]">, "params">) {
   const { slug } = await params;
-  // A leitura exige login; quem não entrou volta para cá depois do login.
-  await requireUser(`/leitor/${encodeURIComponent(slug)}`);
+  const user = await requireUser(`/leitor/${encodeURIComponent(slug)}`);
+  const libraryItem = await getUserLibraryBook(user.id, slug);
 
-  const book = await getPublishedBook(slug);
-  if (!book) notFound();
+  // Retorna a mesma resposta para livro inexistente ou sem propriedade, sem vazar conteúdo.
+  if (!libraryItem) notFound();
 
-  // Entrega 3: além do login, verificar aqui (no servidor) se o usuário comprou este livro.
-  return <ReaderClient title={book.title} />;
+  return <ReaderClient title={libraryItem.book.title} />;
 }

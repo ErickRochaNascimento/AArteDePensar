@@ -1,31 +1,24 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
-import { formatBRL } from "@/lib/data";
-import { SalesChart } from "@/components/SalesChart";
+import Link from "next/link";
+import { AdminSalesPanel } from "@/components/AdminSalesPanel";
+import { AuthorAdminForm } from "@/components/AuthorAdminForm";
 import { BookAdminForm } from "@/components/BookAdminForm";
 import { setBookPublishedAction } from "@/app/actions/catalog";
 import { requireAdmin } from "@/lib/auth";
-import { listAllBooksForAdmin, listAllCategories, listAuthorOptions } from "@/lib/catalog";
+import { formatBRL } from "@/lib/data";
+import {
+  listAllAuthorsForAdmin,
+  listAllBooksForAdmin,
+  listAllCategories,
+  listAuthorOptions,
+} from "@/lib/catalog";
 
 export const metadata: Metadata = { title: "Painel da livraria" };
 
-// Pedidos de exemplo (viram dados reais na Entrega 5).
-const ORDERS: [string, string, string, string, number, boolean][] = [
-  ["#1187", "Camila R.", "O Farol de Santo Amaro", "Pix", 24.9, true],
-  ["#1186", "Rafael M.", "Algoritmos em Casa", "Cartão 3x", 39.9, true],
-  ["#1185", "Joana P.", "Pequeno Manual de Foco", "Boleto", 14.9, false],
-  ["#1184", "Lucas T.", "Receitas de Quintal", "Pix", 34.9, true],
-];
-
 export default function AdminPage({ searchParams }: PageProps<"/admin">) {
   return (
-    <Suspense
-      fallback={
-        <p className="muted" aria-live="polite">
-          Carregando painel…
-        </p>
-      }
-    >
+    <Suspense fallback={<p className="muted" aria-live="polite">Carregando painel…</p>}>
       <AuthorizedAdminDashboard searchParams={searchParams} />
     </Suspense>
   );
@@ -35,185 +28,156 @@ async function AuthorizedAdminDashboard({
   searchParams,
 }: Pick<PageProps<"/admin">, "searchParams">) {
   await requireAdmin();
-
-  const { editar, salvo, erro } = await searchParams;
-  const [books, authors, categories] = await Promise.all([
+  const { editar, editarAutor, salvo, erro } = await searchParams;
+  const [books, authors, categories, authorsForAdmin] = await Promise.all([
     listAllBooksForAdmin(),
     listAuthorOptions(),
     listAllCategories(),
+    listAllAuthorsForAdmin(),
   ]);
 
-  const editing = typeof editar === "string" ? books.find((b) => b.id === editar) : undefined;
-  const publishedCount = books.filter((b) => b.published).length;
+  const editingBook = typeof editar === "string" ? books.find((book) => book.id === editar) : undefined;
+  const editingAuthor = typeof editarAutor === "string"
+    ? authorsForAdmin.find((author) => author.id === editarAutor)
+    : undefined;
+  const publishedCount = books.filter((book) => book.published).length;
   const draftCount = books.length - publishedCount;
+  const now = new Date();
+  const monthStart = `${now.getUTCFullYear()}-${String(now.getUTCMonth() + 1).padStart(2, "0")}-01`;
+  const today = now.toISOString().slice(0, 10);
 
   return (
-    <div className="admin">
-      <nav className="side" aria-label="Administração">
-        <a href="#resumo" aria-current="page">Resumo</a>
+    <div className="admin admin-dashboard">
+      <nav className="side admin-nav" aria-label="Seções do painel administrativo">
+        <a href="#vendas">Vendas</a>
         <a href="#livros">Livros</a>
-        <a href="#pedidos">Vendas</a>
+        <a href="#autores">Autores</a>
       </nav>
 
-      <div style={{ display: "flex", flexDirection: "column", gap: 18, minWidth: 0 }}>
-        <h1 id="resumo" style={{ fontSize: 26 }}>
-          Painel da livraria
-        </h1>
-
-        <div className="kpis">
-          <div className="kpi">
-            <small>Vendas em outubro (exemplo)</small>
-            <b>R$ 4.310</b>
-            <span>+15,9% sobre setembro</span>
+      <div className="admin-content">
+        <header className="admin-header">
+          <div>
+            <p className="tag">Área administrativa</p>
+            <h1>Painel da livraria</h1>
           </div>
-          <div className="kpi">
-            <small>Pedidos (exemplo)</small>
-            <b>187</b>
-            <span>+22 sobre setembro</span>
+          <div className="admin-summary" aria-label="Resumo do catálogo">
+            <span><b>{publishedCount}</b> publicados</span>
+            <span><b>{draftCount}</b> rascunhos</span>
+            <span><b>{authorsForAdmin.length}</b> autores</span>
           </div>
-          <div className="kpi">
-            <small>Livros publicados</small>
-            <b>{publishedCount}</b>
-            <span>{draftCount} em rascunho</span>
+        </header>
+
+        <section className="admin-section" id="vendas" aria-labelledby="sales-heading">
+          <div className="admin-section-heading">
+            <p className="tag">Visão comercial</p>
+            <h2 id="sales-heading">Vendas</h2>
           </div>
-          <div className="kpi">
-            <small>Clientes (exemplo)</small>
-            <b>1.026</b>
-            <span>+48 no mês</span>
+          <AdminSalesPanel initialStart={monthStart} initialEnd={today} />
+        </section>
+
+        <section className="admin-section" id="livros" aria-labelledby="books-heading">
+          <div className="admin-section-heading">
+            <p className="tag">Catálogo</p>
+            <h2 id="books-heading">Livros</h2>
           </div>
-        </div>
+          <div className="panel">
+            <h3>{editingBook ? `Editar livro: ${editingBook.title}` : "Cadastrar livro"}</h3>
+            {salvo === "1" && <p className="ok" role="status">Livro salvo. Se ainda é rascunho, publique-o na lista abaixo.</p>}
+            {erro === "publicacao" && <p className="error" role="alert">Não foi possível alterar a publicação do livro. Tente novamente.</p>}
+            {typeof editar === "string" && !editingBook && <p className="error" role="alert">Livro não encontrado. Você pode cadastrar um novo abaixo.</p>}
+            <BookAdminForm
+              key={editingBook?.id ?? "novo"}
+              authors={authors}
+              categories={categories}
+              initial={editingBook ? {
+                id: editingBook.id,
+                slug: editingBook.slug,
+                title: editingBook.title,
+                authorId: editingBook.authorId,
+                year: String(editingBook.year),
+                category: editingBook.category,
+                pages: String(editingBook.pages),
+                price: editingBook.price.toFixed(2).replace(".", ","),
+                synopsis: editingBook.synopsis,
+              } : undefined}
+            />
+          </div>
 
-        <div className="panel">
-          <h2 style={{ fontSize: 17 }}>Vendas por mês (R$, exemplo)</h2>
-          <SalesChart />
-        </div>
-
-        <div className="panel" id="livros">
-          <h2 style={{ fontSize: 17 }}>
-            {editing ? `Editar livro: ${editing.title}` : "Cadastrar livro"}
-          </h2>
-          {salvo === "1" && (
-            <p className="ok" role="status">
-              Livro salvo. Se ele ainda é rascunho, publique-o na lista abaixo.
-            </p>
-          )}
-          {erro === "publicacao" && (
-            <p className="error" role="alert">
-              Não foi possível alterar a publicação do livro. Tente novamente.
-            </p>
-          )}
-          {typeof editar === "string" && !editing && (
-            <p className="error" role="alert">
-              Livro não encontrado. Você pode cadastrar um novo abaixo.
-            </p>
-          )}
-          <BookAdminForm
-            key={editing?.id ?? "novo"}
-            authors={authors}
-            categories={categories}
-            initial={
-              editing
-                ? {
-                    id: editing.id,
-                    slug: editing.slug,
-                    title: editing.title,
-                    authorId: editing.authorId,
-                    year: String(editing.year),
-                    category: editing.category,
-                    pages: String(editing.pages),
-                    price: editing.price.toFixed(2).replace(".", ","),
-                    synopsis: editing.synopsis,
-                  }
-                : undefined
-            }
-          />
-        </div>
-
-        <div className="panel">
-          <h2 style={{ fontSize: 17 }}>Livros cadastrados</h2>
-          {books.length === 0 ? (
-            <p className="muted">
-              Nenhum livro cadastrado. Rode <code>npm run db:seed</code> para criar os exemplos ou
-              cadastre um acima.
-            </p>
-          ) : (
-            <div className="tbl">
-              <table>
-                <thead>
-                  <tr>
-                    <th>Título</th>
-                    <th>Autor</th>
-                    <th>Categoria</th>
-                    <th>Preço</th>
-                    <th>Status</th>
-                    <th>Ações</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {books.map((b) => (
-                    <tr key={b.id}>
-                      <td>{b.title}</td>
-                      <td>{b.author}</td>
-                      <td>{b.category}</td>
-                      <td>{formatBRL(b.price)}</td>
-                      <td>
-                        <span className={b.published ? "pill" : "pill w"}>
-                          {b.published ? "Publicado" : "Rascunho"}
-                        </span>
-                      </td>
-                      <td>
-                        <div className="row-actions">
-                          <a className="btn sm ghost" href={`/admin?editar=${b.id}#livros`}>
-                            Editar
-                          </a>
-                          <form action={setBookPublishedAction}>
-                            <input type="hidden" name="id" value={b.id} />
-                            <input type="hidden" name="publish" value={String(!b.published)} />
-                            <button className="btn sm" type="submit">
-                              {b.published ? "Retirar" : "Publicar"}
-                            </button>
-                          </form>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+          <div className="panel">
+            <div className="section-title-row">
+              <div><h3>Livros cadastrados</h3><p className="muted">Veja os publicados e rascunhos; edite os metadados ou altere a publicação.</p></div>
+              <a className="btn sm ghost" href="/admin#livros">+ Novo livro</a>
             </div>
-          )}
-        </div>
-
-        <div className="panel" id="pedidos">
-          <h2 style={{ fontSize: 17 }}>Últimos pedidos (exemplo)</h2>
-          <div className="tbl">
-            <table>
-              <thead>
-                <tr>
-                  <th>Pedido</th>
-                  <th>Cliente</th>
-                  <th>Livro</th>
-                  <th>Pagamento</th>
-                  <th>Valor</th>
-                  <th>Status</th>
-                </tr>
-              </thead>
-              <tbody>
-                {ORDERS.map(([id, client, title, method, value, ok]) => (
-                  <tr key={id}>
-                    <td>{id}</td>
-                    <td>{client}</td>
-                    <td>{title}</td>
-                    <td>{method}</td>
-                    <td>{formatBRL(value)}</td>
-                    <td>
-                      <span className={ok ? "pill" : "pill w"}>{ok ? "Aprovado" : "Aguardando"}</span>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+            {books.length === 0 ? (
+              <p className="muted">Nenhum livro cadastrado. Cadastre um livro acima; se necessário, crie o autor sem sair do formulário.</p>
+            ) : (
+              <div className="tbl">
+                <table>
+                  <thead><tr><th>Título</th><th>Autor</th><th>Categoria</th><th>Preço</th><th>Status</th><th>Ações</th></tr></thead>
+                  <tbody>{books.map((book) => (
+                    <tr key={book.id}>
+                      <td>{book.title}</td><td>{book.author}</td><td>{book.category}</td><td>{formatBRL(book.price)}</td>
+                      <td><span className={book.published ? "pill" : "pill w"}>{book.published ? "Publicado" : "Rascunho"}</span></td>
+                      <td><div className="row-actions">
+                        <Link className="btn sm ghost" href={`/admin?editar=${encodeURIComponent(book.id)}#livros`}>Editar</Link>
+                        <form action={setBookPublishedAction}>
+                          <input type="hidden" name="id" value={book.id} />
+                          <input type="hidden" name="publish" value={String(!book.published)} />
+                          <button className="btn sm" type="submit">{book.published ? "Retirar" : "Publicar"}</button>
+                        </form>
+                      </div></td>
+                    </tr>
+                  ))}</tbody>
+                </table>
+              </div>
+            )}
           </div>
-        </div>
+        </section>
+
+        <section className="admin-section" id="autores" aria-labelledby="authors-heading">
+          <div className="admin-section-heading">
+            <p className="tag">Pessoas e perfis</p>
+            <h2 id="authors-heading">Autores</h2>
+          </div>
+          <div className="panel">
+            <h3>{editingAuthor ? `Editar autor: ${editingAuthor.name}` : "Cadastrar autor"}</h3>
+            {typeof editarAutor === "string" && !editingAuthor && <p className="error" role="alert">Autor não encontrado. Você pode cadastrar um novo abaixo.</p>}
+            <AuthorAdminForm
+              key={editingAuthor?.id ?? "novo-autor"}
+              initial={editingAuthor ? {
+                id: editingAuthor.id,
+                slug: editingAuthor.slug,
+                name: editingAuthor.name,
+                bio: editingAuthor.bio,
+                color: editingAuthor.color,
+              } : undefined}
+            />
+          </div>
+
+          <div className="panel">
+            <div className="section-title-row">
+              <div><h3>Autores cadastrados</h3><p className="muted">Perfis públicos aparecem quando o autor tem ao menos um livro publicado.</p></div>
+              <a className="btn sm ghost" href="/admin#autores">+ Novo autor</a>
+            </div>
+            {authorsForAdmin.length === 0 ? (
+              <p className="muted">Nenhum autor cadastrado. Crie um autor aqui ou diretamente durante o cadastro de um livro.</p>
+            ) : (
+              <div className="tbl">
+                <table>
+                  <thead><tr><th>Autor</th><th>Livros publicados</th><th>Livros cadastrados</th><th>Perfil</th><th>Ações</th></tr></thead>
+                  <tbody>{authorsForAdmin.map((author) => (
+                    <tr key={author.id}>
+                      <td><span className="author-name-cell"><i style={{ background: author.color }} />{author.name}</span></td>
+                      <td>{author.publishedBookCount}</td><td>{author.totalBookCount}</td>
+                      <td>{author.publishedBookCount > 0 ? <Link href={`/autor/${encodeURIComponent(author.slug)}`}>Ver perfil</Link> : <span className="muted">Sem livros publicados</span>}</td>
+                      <td><Link className="btn sm ghost" href={`/admin?editarAutor=${encodeURIComponent(author.id)}#autores`}>Editar</Link></td>
+                    </tr>
+                  ))}</tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        </section>
       </div>
     </div>
   );

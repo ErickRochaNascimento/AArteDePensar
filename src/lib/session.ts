@@ -3,6 +3,7 @@ import "server-only";
 import { createHash, randomBytes } from "node:crypto";
 import { cache } from "react";
 import { cookies } from "next/headers";
+import { connection } from "next/server";
 import { getDb } from "@/lib/db";
 
 const COOKIE_NAME = "livraria_session";
@@ -31,6 +32,9 @@ export const getCurrentUser = cache(
     const cookieStore = await cookies();
     const token = cookieStore.get(COOKIE_NAME)?.value;
     if (!token) return null;
+
+    // A validade de uma sessão depende do horário da requisição, não do build.
+    await connection();
 
     const session = await getDb().session.findFirst({
       where: {

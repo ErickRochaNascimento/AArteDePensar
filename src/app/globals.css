@@ -869,6 +869,25 @@ textarea[aria-invalid="true"] {
   gap: 14px;
   min-width: 0;
 }
+.account-form {
+  max-width: 520px;
+}
+.account-form input[aria-invalid="true"] {
+  border-color: #b3261e;
+}
+.reader-empty {
+  max-width: 880px;
+  min-height: 420px;
+  margin-inline: auto;
+  display: flex;
+  align-items: center;
+}
+.reader-empty .panel {
+  width: 100%;
+  max-width: 680px;
+  margin-inline: auto;
+  padding: clamp(24px, 5vw, 48px);
+}
 
 /* ===== Leitor ===== */
 .reader {
@@ -1068,5 +1087,176 @@ svg text {
       opacity: 0.4;
       transform: translateY(6px);
     }
+  }
+}
+
+
+/* ===== Admin dividido em Vendas, Livros e Autores ===== */
+.admin-dashboard {
+  align-items: start;
+}
+.admin-nav {
+  position: sticky;
+  top: 24px;
+  padding: 8px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--surface);
+}
+.admin-content {
+  display: flex;
+  flex-direction: column;
+  gap: 34px;
+  min-width: 0;
+}
+.admin-header,
+.admin-section-heading,
+.sales-panel-heading,
+.section-title-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+.admin-header h1,
+.admin-section-heading h2,
+.sales-panel-heading h2 {
+  margin: 0;
+}
+.admin-summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  color: var(--muted);
+  font-size: 13px;
+}
+.admin-summary span {
+  padding: 7px 11px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--surface);
+}
+.admin-summary b {
+  color: var(--fg);
+}
+.admin-section {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  scroll-margin-top: 20px;
+}
+.admin-section-heading {
+  align-items: end;
+  border-bottom: 1px solid var(--line);
+  padding-bottom: 10px;
+}
+.admin-section-heading .tag,
+.sales-panel-heading p {
+  margin: 0 0 5px;
+}
+.admin-section > .panel h3,
+.admin-sales .panel h3 {
+  margin: 0;
+  font-size: 17px;
+}
+.quick-author-toggle {
+  display: flex;
+  align-items: end;
+  padding-bottom: 2px;
+}
+.quick-author-panel {
+  margin-top: 16px;
+  padding: 16px;
+  border: 1px dashed var(--line);
+  border-radius: 8px;
+  background: var(--soft);
+}
+.quick-author-panel h3 {
+  margin: 0 0 4px;
+  font-size: 16px;
+}
+.quick-author-panel > p {
+  margin: 0 0 14px;
+}
+.author-form-compact {
+  grid-template-columns: minmax(0, 1fr) 140px;
+}
+.author-color-label input[type="color"] {
+  width: 100%;
+  min-height: 42px;
+  padding: 3px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--surface);
+}
+.sales-period {
+  display: flex;
+  align-items: end;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 16px;
+}
+.sales-period label {
+  width: min(190px, 100%);
+}
+.sales-period input[type="date"] {
+  width: 100%;
+  min-width: 0;
+  padding: 9px 10px;
+  color: var(--fg);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  font: inherit;
+}
+.sales-period small {
+  flex-basis: 100%;
+}
+.sales-chart-empty {
+  position: relative;
+  min-height: 190px;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+}
+.sales-chart-empty svg {
+  position: absolute;
+  inset: 0;
+  height: 100%;
+}
+.sales-chart-empty p {
+  z-index: 1;
+  max-width: 100%;
+  padding: 9px 13px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--muted);
+  text-align: center;
+}
+.sales-empty-cell {
+  padding: 24px 12px;
+  text-align: center;
+  color: var(--muted);
+}
+.author-name-cell {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+.author-name-cell i {
+  width: 12px;
+  height: 12px;
+  flex: none;
+  border-radius: 50%;
+}
+
+@media (max-width: 900px) {
+  .admin-nav {
+    position: static;
+  }
+  .author-form-compact {
+    grid-template-columns: minmax(0, 1fr);
   }
 }
