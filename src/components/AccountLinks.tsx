@@ -12,7 +12,7 @@ export async function AccountLinks() {
   const firstName = user.name.split(" ")[0];
   return (
     <>
-      {user.role === "ADMIN" && <Link href="/admin">Admin</Link>}
+      {user.role !== "USER" && <Link href="/admin">{user.role === "ADMIN" ? "Admin" : "Painel"}</Link>}
       <span className="links-user">Olá, {firstName}</span>
       <form action={logoutAction}>
         <button type="submit" className="link-btn">

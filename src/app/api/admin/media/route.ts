@@ -38,7 +38,7 @@ export async function POST(request: Request) {
   try {
     const user = await getCurrentUser();
     if (!user) return jsonError("Entre na conta administrativa para enviar arquivos.", 401);
-    if (user.role !== "ADMIN") return jsonError("Somente administradores podem enviar arquivos.", 403);
+    if (user.role === "USER") return jsonError("Somente a equipe pode enviar arquivos.", 403);
 
     const form = await request.formData();
     const entityType = form.get("entityType");
@@ -59,8 +59,9 @@ export async function POST(request: Request) {
 
     const db = getDb();
     if (authorPhoto) {
-      const author = await db.author.findUnique({ where: { id: entityId }, select: { id: true, photoUrl: true } });
+      const author = await db.author.findUnique({ where: { id: entityId }, select: { id: true, photoUrl: true, published: true } });
       if (!author) return jsonError("Autor não encontrado.", 404);
+      if (user.role === "EMPLOYEE" && author.published) return jsonError("Funcionários só podem enviar mídia para autores não publicados.", 403);
 
       const stored = await storeImage(file, "authors");
       if (!stored.ok) return jsonError(stored.error, 400);
@@ -78,9 +79,10 @@ export async function POST(request: Request) {
 
     const book = await db.book.findUnique({
       where: { id: entityId },
-      select: { id: true, slug: true, coverImageUrl: true, ebookStorageKey: true },
+      select: { id: true, slug: true, coverImageUrl: true, ebookStorageKey: true, published: true },
     });
     if (!book) return jsonError("Livro não encontrado.", 404);
+    if (user.role === "EMPLOYEE" && book.published) return jsonError("Funcionários só podem enviar mídia para livros não publicados.", 403);
 
     if (bookCover) {
       const stored = await storeImage(file, "covers");

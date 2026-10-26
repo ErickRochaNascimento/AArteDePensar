@@ -6,12 +6,13 @@ import { useRef, useState } from "react";
 
 type Props = {
   entityType: "author" | "book";
-  entityId: string;
+  entityId: string | null;
   kind: "photo" | "cover" | "ebook";
   currentUrl?: string | null;
   currentFileName?: string | null;
   currentSize?: number | null;
   currentMimeType?: string | null;
+  canUpload?: boolean;
 };
 
 type UploadResponse = {
@@ -40,6 +41,7 @@ export function MediaUploader({
   currentFileName,
   currentSize,
   currentMimeType,
+  canUpload = true,
 }: Props) {
   const router = useRouter();
   const inputRef = useRef<HTMLInputElement>(null);
@@ -72,6 +74,10 @@ export function MediaUploader({
   }
 
   async function upload() {
+    if (!entityId) {
+      setError("Salve primeiro os dados para gerar o ID do registro.");
+      return;
+    }
     if (!file) {
       setError("Selecione um arquivo antes de enviar.");
       return;
@@ -133,16 +139,19 @@ export function MediaUploader({
       )}
       {isEbook && !fileName && <p className="muted">Nenhum EPUB/PDF cadastrado.</p>}
       {!isEbook && !imageUrl && <p className="muted">Nenhuma imagem cadastrada.</p>}
+      {!canUpload && <p className="muted">Somente um administrador pode alterar mídias de registros publicados.</p>}
+      {!entityId && <p className="muted">Você pode escolher o arquivo agora; salve os dados para habilitar o envio.</p>}
       <div className="media-upload-controls">
         <input
           ref={inputRef}
           type="file"
           accept={accept}
+          disabled={!canUpload || pending}
           aria-label={`Selecionar ${title.toLowerCase()}`}
           onChange={(event) => selectFile(event.target.files?.[0] ?? null)}
         />
-        <button className="btn sm" type="button" onClick={upload} disabled={pending || !file}>
-          {pending ? "Enviando…" : "Enviar arquivo"}
+        <button className="btn sm" type="button" onClick={upload} disabled={!canUpload || pending || !file || !entityId}>
+          {pending ? "Enviando…" : entityId ? "Enviar arquivo" : "Salve para enviar"}
         </button>
       </div>
       {file && <small className="muted">Selecionado: {file.name} · {bytesLabel(file.size)}</small>}

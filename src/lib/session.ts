@@ -13,7 +13,7 @@ export type AuthenticatedUser = {
   id: string;
   name: string;
   email: string;
-  role: "USER" | "ADMIN";
+  role: "USER" | "EMPLOYEE" | "ADMIN";
 };
 
 function hashToken(token: string) {

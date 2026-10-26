@@ -1,4 +1,5 @@
 import { Suspense } from "react";
+import { connection } from "next/server";
 import { listAuthorsWithBooks, listBestSellers, listPublishedBooks } from "@/lib/catalog";
 import { AuthorAvatar } from "@/components/AuthorAvatar";
 import { BookCard } from "@/components/BookCard";
@@ -40,6 +41,7 @@ async function SearchedCatalog({
 }: {
   searchParams: PageProps<"/">["searchParams"];
 }) {
+  await connection();
   const { q } = await searchParams;
   const term = typeof q === "string" ? q.trim().slice(0, 100) : "";
   const books = await listPublishedBooks(term);
@@ -63,6 +65,7 @@ async function SearchedCatalog({
 }
 
 async function BestSellers() {
+  await connection();
   const books = await listBestSellers(8);
   if (books.length === 0) return null;
 
@@ -70,8 +73,8 @@ async function BestSellers() {
     <section className="sec" id="mais-vendidos">
       <h2>Mais vendidos da semana</h2>
       <Carousel label="Mais vendidos da semana">
-        {books.map((b) => (
-          <BookCard key={b.id} book={b} />
+        {books.map((book) => (
+          <BookCard key={book.id} book={book} />
         ))}
       </Carousel>
     </section>
@@ -79,6 +82,7 @@ async function BestSellers() {
 }
 
 async function Authors() {
+  await connection();
   const authors = await listAuthorsWithBooks();
   if (authors.length === 0) return null;
 
@@ -86,8 +90,8 @@ async function Authors() {
     <section className="sec" id="autores">
       <h2>Autores</h2>
       <Carousel label="Autores" variant="authors" loop>
-        {authors.map((a) => (
-          <AuthorAvatar key={a.slug} author={a} />
+        {authors.map((author) => (
+          <AuthorAvatar key={author.slug} author={author} />
         ))}
       </Carousel>
     </section>

@@ -1,14 +1,12 @@
 import type { Metadata } from "next";
-import Image from "next/image";
 import { Suspense } from "react";
 import Link from "next/link";
+import { AdminAuthorsPanel } from "@/components/AdminAuthorsPanel";
+import { AdminBooksPanel } from "@/components/AdminBooksPanel";
 import { AdminSalesPanel } from "@/components/AdminSalesPanel";
-import { AuthorAdminForm } from "@/components/AuthorAdminForm";
-import { BookAdminForm } from "@/components/BookAdminForm";
-import { BookMediaManager } from "@/components/BookMediaManager";
-import { setBookPublishedAction } from "@/app/actions/catalog";
-import { requireAdmin } from "@/lib/auth";
-import { formatBRL, normalizeText } from "@/lib/data";
+import { requireStaff } from "@/lib/auth";
+import { normalizeText } from "@/lib/data";
+import { listPendingCatalogChanges } from "@/lib/catalog-changes";
 import {
   listAllAuthorsForAdmin,
   listAllBooksForAdmin,
@@ -18,30 +16,59 @@ import {
 
 export const metadata: Metadata = { title: "Painel da livraria" };
 
+const NOTICE_COPY: Record<string, string> = {
+  "livro-enviado": "A proposta de edição do livro foi enviada para aprovação.",
+  "livro-confirmado": "A edição do livro foi confirmada e o formulário foi fechado.",
+  "livro-publicado": "O livro foi publicado.",
+  "livro-retirado": "O livro foi retirado do catálogo público.",
+  "livro-excluido": "O livro foi excluído.",
+  "livro-na-biblioteca": "O livro está na biblioteca de um usuário e não pode ser excluído.",
+  "livro-com-pendencia": "Resolva a proposta pendente antes de excluir este livro.",
+  "livro-inexistente": "O livro não foi encontrado.",
+  "erro-excluir-livro": "Não foi possível excluir o livro; verifique vínculos antes de tentar novamente.",
+  "autor-precisa-ser-publicado": "Publique o autor antes de publicar o livro.",
+  "erro-publicacao-livro": "Não foi possível alterar a publicação do livro.",
+  "autor-enviado": "A proposta de edição do autor foi enviada para aprovação.",
+  "autor-confirmado": "A edição do autor foi confirmada e o formulário foi fechado.",
+  "autor-publicado": "O autor foi publicado.",
+  "autor-retirado": "O autor foi retirado do catálogo público.",
+  "autor-excluido": "O autor foi excluído.",
+  "autor-inexistente": "O autor não foi encontrado.",
+  "erro-excluir-autor": "Não foi possível excluir o autor; verifique os vínculos antes de tentar novamente.",
+  "autor-com-livros": "Autores associados a livros não podem ser excluídos.",
+  "autor-com-pendencia": "Resolva a proposta pendente antes de excluir este autor.",
+  "autor-com-livros-publicados": "Retire primeiro os livros publicados deste autor.",
+  "erro-publicacao-autor": "Não foi possível alterar a publicação do autor.",
+  "proposta-aprovada": "A edição proposta foi confirmada.",
+  "proposta-rejeitada": "A proposta foi rejeitada; o catálogo não foi alterado.",
+  "proposta-ja-analisada": "Esta proposta já foi analisada por um administrador.",
+  "proposta-invalida": "A proposta não passou pela validação e não foi aplicada.",
+  "erro-na-proposta": "Não foi possível revisar a proposta. O catálogo permanece inalterado.",
+};
+
 export default function AdminPage({ searchParams }: PageProps<"/admin">) {
   return (
     <Suspense fallback={<p className="muted" aria-live="polite">Carregando painel…</p>}>
-      <AuthorizedAdminDashboard searchParams={searchParams} />
+      <AuthorizedDashboard searchParams={searchParams} />
     </Suspense>
   );
 }
 
-async function AuthorizedAdminDashboard({
+async function AuthorizedDashboard({
   searchParams,
 }: Pick<PageProps<"/admin">, "searchParams">) {
-  await requireAdmin();
-  const { editar, editarAutor, salvo, erro, qAutor } = await searchParams;
-  const [books, authors, categories, authorsForAdmin] = await Promise.all([
+  const user = await requireStaff();
+  const isAdmin = user.role === "ADMIN";
+  const { qAutor, notice } = await searchParams;
+  const [books, authors, categories, authorsForAdmin, pendingBooks, pendingAuthors] = await Promise.all([
     listAllBooksForAdmin(),
     listAuthorOptions(),
     listAllCategories(),
     listAllAuthorsForAdmin(),
+    isAdmin ? listPendingCatalogChanges("BOOK") : Promise.resolve([]),
+    isAdmin ? listPendingCatalogChanges("AUTHOR") : Promise.resolve([]),
   ]);
 
-  const editingBook = typeof editar === "string" ? books.find((book) => book.id === editar) : undefined;
-  const editingAuthor = typeof editarAutor === "string"
-    ? authorsForAdmin.find((author) => author.id === editarAutor)
-    : undefined;
   const authorSearch = typeof qAutor === "string" ? qAutor.trim().slice(0, 100) : "";
   const normalizedAuthorSearch = normalizeText(authorSearch);
   const visibleAuthors = normalizedAuthorSearch
@@ -49,23 +76,41 @@ async function AuthorizedAdminDashboard({
     : authorsForAdmin;
   const publishedCount = books.filter((book) => book.published).length;
   const draftCount = books.length - publishedCount;
-  const now = new Date();
-  const monthStart = `${now.getUTCFullYear()}-${String(now.getUTCMonth() + 1).padStart(2, "0")}-01`;
-  const today = now.toISOString().slice(0, 10);
+  const noticeText = typeof notice === "string" ? NOTICE_COPY[notice] : undefined;
+  const errorNotices = new Set([
+    "livro-na-biblioteca", "livro-com-pendencia", "livro-inexistente", "erro-excluir-livro",
+    "autor-precisa-ser-publicado", "erro-publicacao-livro", "autor-inexistente", "erro-excluir-autor",
+    "autor-com-livros", "autor-com-pendencia", "autor-com-livros-publicados", "erro-publicacao-autor",
+    "proposta-ja-analisada", "proposta-invalida", "erro-na-proposta",
+  ]);
+
+  const dateParts = isAdmin ? new Intl.DateTimeFormat("en-US", {
+    timeZone: "America/Sao_Paulo",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts(new Date()) : [];
+  const datePart = (type: string) => dateParts.find((part) => part.type === type)?.value ?? "";
+  const year = datePart("year");
+  const month = datePart("month");
+  const today = `${year}-${month}-${datePart("day")}`;
+  const monthStart = `${year}-${month}-01`;
 
   return (
     <div className="admin admin-dashboard">
-      <nav className="side admin-nav" aria-label="Seções do painel administrativo">
-        <a href="#vendas">Vendas</a>
+      <nav className="side admin-nav" aria-label="Seções do painel">
+        {isAdmin && <a href="#vendas">Vendas</a>}
         <a href="#livros">Livros</a>
         <a href="#autores">Autores</a>
+        {isAdmin && <Link href="/admin/usuarios">Gerenciar usuários</Link>}
       </nav>
 
       <div className="admin-content">
         <header className="admin-header">
           <div>
-            <p className="tag">Área administrativa</p>
-            <h1>Painel da livraria</h1>
+            <p className="tag">{isAdmin ? "Área administrativa" : "Equipe da livraria"}</p>
+            <h1>{isAdmin ? "Painel da livraria" : "Painel do Funcionário"}</h1>
+            {!isAdmin && <p className="muted">Cadastros novos são rascunhos; edições de itens existentes aguardam confirmação de Admin.</p>}
           </div>
           <div className="admin-summary" aria-label="Resumo do catálogo">
             <span><b>{publishedCount}</b> publicados</span>
@@ -74,81 +119,31 @@ async function AuthorizedAdminDashboard({
           </div>
         </header>
 
-        <section className="admin-section" id="vendas" aria-labelledby="sales-heading">
-          <div className="admin-section-heading">
-            <p className="tag">Visão comercial</p>
-            <h2 id="sales-heading">Vendas</h2>
-          </div>
-          <AdminSalesPanel initialStart={monthStart} initialEnd={today} />
-        </section>
+        {noticeText && <p className={`${typeof notice === "string" && errorNotices.has(notice) ? "error" : "ok"} admin-notice`} role="status">{noticeText}</p>}
+
+        {isAdmin && (
+          <section className="admin-section" id="vendas" aria-labelledby="sales-heading">
+            <div className="admin-section-heading">
+              <p className="tag">Visão comercial</p>
+              <h2 id="sales-heading">Vendas</h2>
+            </div>
+            <AdminSalesPanel initialStart={monthStart} initialEnd={today} />
+          </section>
+        )}
 
         <section className="admin-section" id="livros" aria-labelledby="books-heading">
           <div className="admin-section-heading">
             <p className="tag">Catálogo</p>
             <h2 id="books-heading">Livros</h2>
           </div>
-          <div className="panel">
-            <h3>{editingBook ? `Editar livro: ${editingBook.title}` : "Cadastrar livro"}</h3>
-            {salvo === "1" && <p className="ok" role="status">Livro salvo. Se ainda é rascunho, publique-o na lista abaixo.</p>}
-            {erro === "publicacao" && <p className="error" role="alert">Não foi possível alterar a publicação do livro. Tente novamente.</p>}
-            {typeof editar === "string" && !editingBook && <p className="error" role="alert">Livro não encontrado. Você pode cadastrar um novo abaixo.</p>}
-            <BookAdminForm
-              key={editingBook?.id ?? "novo"}
-              authors={authors}
-              categories={categories}
-              initial={editingBook ? {
-                id: editingBook.id,
-                slug: editingBook.slug,
-                title: editingBook.title,
-                authorId: editingBook.authorId,
-                year: String(editingBook.year),
-                category: editingBook.category,
-                pages: String(editingBook.pages),
-                price: editingBook.price.toFixed(2).replace(".", ","),
-                synopsis: editingBook.synopsis,
-              } : undefined}
-            />
-            {editingBook && (
-              <BookMediaManager
-                bookId={editingBook.id}
-                coverImageUrl={editingBook.coverImageUrl}
-                hasEbook={editingBook.hasEbook}
-                ebookMimeType={editingBook.ebookMimeType}
-                ebookOriginalName={editingBook.ebookOriginalName}
-                ebookSize={editingBook.ebookSize}
-              />
-            )}
-          </div>
-
-          <div className="panel">
-            <div className="section-title-row">
-              <div><h3>Livros cadastrados</h3><p className="muted">Veja os publicados e rascunhos; edite os metadados ou altere a publicação.</p></div>
-              <a className="btn sm ghost" href="/admin#livros">+ Novo livro</a>
-            </div>
-            {books.length === 0 ? (
-              <p className="muted">Nenhum livro cadastrado. Cadastre um livro acima; se necessário, crie o autor sem sair do formulário.</p>
-            ) : (
-              <div className="tbl">
-                <table>
-                  <thead><tr><th>Título</th><th>Autor</th><th>Categoria</th><th>Preço</th><th>Status</th><th>Ações</th></tr></thead>
-                  <tbody>{books.map((book) => (
-                    <tr key={book.id}>
-                      <td>{book.title}</td><td>{book.author}</td><td>{book.category}</td><td>{formatBRL(book.price)}</td>
-                      <td><span className={book.published ? "pill" : "pill w"}>{book.published ? "Publicado" : "Rascunho"}</span></td>
-                      <td><div className="row-actions">
-                        <Link className="btn sm ghost" href={`/admin?editar=${encodeURIComponent(book.id)}#livros`}>Editar</Link>
-                        <form action={setBookPublishedAction}>
-                          <input type="hidden" name="id" value={book.id} />
-                          <input type="hidden" name="publish" value={String(!book.published)} />
-                          <button className="btn sm" type="submit">{book.published ? "Retirar" : "Publicar"}</button>
-                        </form>
-                      </div></td>
-                    </tr>
-                  ))}</tbody>
-                </table>
-              </div>
-            )}
-          </div>
+          <AdminBooksPanel
+            books={books}
+            authors={authors}
+            categories={categories}
+            isAdmin={isAdmin}
+            publicationError={notice === "autor-precisa-ser-publicado" || notice === "erro-publicacao-livro"}
+            pendingChanges={pendingBooks}
+          />
         </section>
 
         <section className="admin-section" id="autores" aria-labelledby="authors-heading">
@@ -156,60 +151,13 @@ async function AuthorizedAdminDashboard({
             <p className="tag">Pessoas e perfis</p>
             <h2 id="authors-heading">Autores</h2>
           </div>
-          <div className="panel">
-            <h3>{editingAuthor ? `Editar autor: ${editingAuthor.name}` : "Cadastrar autor"}</h3>
-            {typeof editarAutor === "string" && !editingAuthor && <p className="error" role="alert">Autor não encontrado. Você pode cadastrar um novo abaixo.</p>}
-            <AuthorAdminForm
-              key={editingAuthor?.id ?? "novo-autor"}
-              initial={editingAuthor ? {
-                id: editingAuthor.id,
-                slug: editingAuthor.slug,
-                name: editingAuthor.name,
-                bio: editingAuthor.bio,
-                color: editingAuthor.color,
-                photoUrl: editingAuthor.photoUrl,
-              } : undefined}
-            />
-          </div>
-
-          <div className="panel">
-            <div className="section-title-row">
-              <div><h3>Autores cadastrados</h3><p className="muted">Pesquise por nome; perfis públicos aparecem quando o autor tem ao menos um livro publicado.</p></div>
-              <a className="btn sm ghost" href="/admin#autores">+ Novo autor</a>
-            </div>
-            <form className="admin-inline-search" action="/admin#autores" method="get" role="search">
-              <label htmlFor="q-autor">Pesquisar autor cadastrado</label>
-              <div>
-                <input id="q-autor" name="qAutor" type="search" maxLength={100} defaultValue={authorSearch} placeholder="Nome do autor" />
-                <button className="btn sm" type="submit">Pesquisar</button>
-                {authorSearch && <Link className="btn sm ghost" href="/admin#autores">Limpar</Link>}
-              </div>
-            </form>
-            {authorsForAdmin.length === 0 ? (
-              <p className="muted">Nenhum autor cadastrado. Crie um autor aqui ou diretamente durante o cadastro de um livro.</p>
-            ) : visibleAuthors.length === 0 ? (
-              <p className="muted" role="status">Nenhum autor corresponde a “{authorSearch}”.</p>
-            ) : (
-              <div className="tbl">
-                <table>
-                  <thead><tr><th>Autor</th><th>Livros publicados</th><th>Livros cadastrados</th><th>Perfil</th><th>Ações</th></tr></thead>
-                  <tbody>{visibleAuthors.map((author) => (
-                    <tr key={author.id}>
-                      <td><div className="admin-author-cell">
-                        {author.photoUrl
-                          ? <Image src={author.photoUrl} width={36} height={36} alt="" className="admin-author-photo" unoptimized />
-                          : <span className="admin-author-color" style={{ background: author.color }} />}
-                        {author.name}
-                      </div></td>
-                      <td>{author.publishedBookCount}</td><td>{author.totalBookCount}</td>
-                      <td>{author.publishedBookCount > 0 ? <Link href={`/autor/${encodeURIComponent(author.slug)}`}>Ver perfil</Link> : <span className="muted">Sem livros publicados</span>}</td>
-                      <td><Link className="btn sm ghost" href={`/admin?editarAutor=${encodeURIComponent(author.id)}#autores`}>Editar</Link></td>
-                    </tr>
-                  ))}</tbody>
-                </table>
-              </div>
-            )}
-          </div>
+          <AdminAuthorsPanel
+            authors={visibleAuthors}
+            totalAuthors={authorsForAdmin.length}
+            searchTerm={authorSearch}
+            isAdmin={isAdmin}
+            pendingChanges={pendingAuthors}
+          />
         </section>
       </div>
     </div>

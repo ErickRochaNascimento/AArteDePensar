@@ -132,7 +132,7 @@ export const listRelatedBooks = cache(async (book: Book, limit = 6): Promise<Boo
 /** Autores que têm ao menos um livro publicado (vitrine da página inicial). */
 export const listAuthorsWithBooks = cache(async (): Promise<Author[]> => {
   const rows = await getDb().author.findMany({
-    where: { books: { some: { published: true } } },
+    where: { published: true, books: { some: { published: true } } },
     select: {
       slug: true,
       name: true,
@@ -156,7 +156,7 @@ export const listAuthorsWithBooks = cache(async (): Promise<Author[]> => {
 export const getAuthorWithBooks = cache(
   async (slug: string): Promise<{ author: Author; books: Book[] } | null> => {
     const row = await getDb().author.findUnique({
-      where: { slug },
+      where: { slug, published: true },
       select: {
         slug: true,
         name: true,
@@ -186,7 +186,7 @@ export const getAuthorWithBooks = cache(
   },
 );
 
-// ---- Administração (use apenas depois de requireAdmin) ----
+// ---- Administração (use apenas depois de requireStaff/requireAdmin conforme a operação) ----
 
 export async function listAllBooksForAdmin(): Promise<AdminBook[]> {
   const rows = await getDb().book.findMany({
@@ -225,6 +225,7 @@ export type AdminAuthor = {
   bio: string;
   color: string;
   photoUrl: string | null;
+  published: boolean;
   publishedBookCount: number;
   totalBookCount: number;
 };
@@ -238,6 +239,7 @@ export async function listAllAuthorsForAdmin(): Promise<AdminAuthor[]> {
       bio: true,
       color: true,
       photoUrl: true,
+      published: true,
       _count: { select: { books: true } },
       books: { where: { published: true }, select: { id: true } },
     },
@@ -251,6 +253,7 @@ export async function listAllAuthorsForAdmin(): Promise<AdminAuthor[]> {
     bio: author.bio,
     color: author.color,
     photoUrl: author.photoUrl,
+    published: author.published,
     publishedBookCount: author.books.length,
     totalBookCount: author._count.books,
   }));

@@ -16,5 +16,6 @@ export type AuthorFormState = {
     bio: string;
     color: string;
     photoUrl: string | null;
+    published: boolean;
   };
 };

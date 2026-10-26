@@ -26,7 +26,10 @@ async function main() {
         authorIds.set(author.slug, existing.id);
         continue;
       }
-      const created = await db.author.create({ data: author, select: { id: true } });
+      const created = await db.author.create({
+        data: { ...author, published: true },
+        select: { id: true },
+      });
       authorIds.set(author.slug, created.id);
       newAuthors++;
     }
