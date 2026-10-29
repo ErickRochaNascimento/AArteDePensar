@@ -1725,3 +1725,78 @@ svg text {
 
 .approval-list{display:grid;gap:14px;margin-top:14px}.approval-request{background:var(--surface);border:1px solid var(--line);border-left:4px solid var(--warn);border-radius:8px;padding:16px}.approval-request h4{margin:6px 0 0;font-size:18px}.approval-details{display:grid;gap:5px;margin:12px 0}.approval-details p{margin:0}.approval-color{display:inline-block;width:14px;height:14px;border:1px solid var(--line);border-radius:3px;vertical-align:-2px}.approval-actions{margin-top:12px}.btn.danger{color:#b42318;border-color:#b42318}.btn.danger:hover{background:#b42318;color:#fff}.user-role-form{display:flex;align-items:center;gap:8px;flex-wrap:wrap}.user-role-form select{max-width:180px}.user-search{margin-block:16px}.admin-notice{margin:12px 0;padding:10px 14px;background:var(--soft);border-radius:6px}.admin-users{display:grid;gap:18px}.admin-users h1{font-size:30px}.admin-users .panel{min-width:0}
 @media(max-width:640px){.approval-request{padding:12px}.approval-actions{align-items:stretch}.approval-actions form,.approval-actions button{width:100%}.user-role-form{align-items:stretch;flex-direction:column}.user-role-form select,.user-role-form button{max-width:none;width:100%}.admin-users .section-title-row{align-items:flex-start;flex-direction:column}}
+
+
+.age-rating {
+  display: inline-flex;
+  align-items: center;
+  width: fit-content;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--soft);
+  color: var(--accent);
+  padding: 2px 8px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.age-rating.is-pending {
+  background: color-mix(in srgb, var(--warn) 16%, transparent);
+  color: var(--warn);
+}
+
+.consent-field {
+  display: grid;
+  grid-template-columns: 18px minmax(0, 1fr);
+  align-items: start;
+  gap: 9px;
+  font-size: 13.5px;
+}
+
+.consent-field input {
+  width: 16px;
+  height: 16px;
+  margin: 3px 0 0;
+  accent-color: var(--accent);
+}
+
+.consent-field label {
+  display: block;
+  line-height: 1.45;
+}
+
+.legal-page {
+  max-width: 800px;
+  margin-inline: auto;
+}
+
+.legal-page h1 {
+  margin-top: 10px;
+  font-size: clamp(28px, 5vw, 40px);
+}
+
+.legal-page section {
+  margin-top: 28px;
+}
+
+.legal-page h2 {
+  margin-bottom: 9px;
+  font-size: 20px;
+}
+
+.legal-page p {
+  max-width: 75ch;
+}
+
+.site-footer .wrap {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 14px 24px;
+}
+
+.footer-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+}

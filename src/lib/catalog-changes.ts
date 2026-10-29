@@ -1,6 +1,7 @@
 import "server-only";
 
 import { getDb } from "@/lib/db";
+import type { BookAgeRating } from "@/lib/book-rating";
 
 export type CatalogChangePayload = {
   title?: string;
@@ -10,6 +11,7 @@ export type CatalogChangePayload = {
   pages?: number;
   price?: string;
   synopsis?: string;
+  ageRating?: BookAgeRating;
   name?: string;
   bio?: string;
   color?: string;

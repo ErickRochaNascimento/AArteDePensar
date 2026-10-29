@@ -45,6 +45,10 @@ export default function RootLayout({
         <footer className="site-footer">
           <div className="wrap">
             © {BRAND} · Livros digitais para ler no site ou baixar.
+            <nav className="footer-links" aria-label="Documentos legais">
+              <Link href="/termos">Termos de Uso</Link>
+              <Link href="/privacidade">Política de Privacidade</Link>
+            </nav>
           </div>
         </footer>
       </body>

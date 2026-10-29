@@ -55,3 +55,12 @@
 - Na criação rápida de autor dentro do cadastro do livro, o controle de foto vem antes do botão “Cadastrar autor”. Ao clicar em “Usar este autor no livro”, selecionar o autor, fechar a área de cadastro rápido e rolar de volta ao formulário do livro.
 - Depois de ADMIN confirmar uma edição ou Funcionário enviar uma proposta, fechar e limpar o formulário; atualizar a página também fecha qualquer edição. Novo cadastro pode permanecer aberto para concluir os uploads após o registro receber ID.
 - Migration aditiva para `EMPLOYEE`, status de publicação de autor e propostas/auditoria mínima, sem executar no banco até o MySQL local estar acessível.
+
+
+## Adequação etária e termos legais — implementado em código; migration não aplicada, livros antigos aguardam classificação e os textos legais precisam de revisão antes de produção
+
+- O site deve deixar explícito nos Termos de Uso e na Política de Privacidade que o serviço é destinado a maiores de 18 anos; a decisão desta implementação é adotar 18 anos como idade mínima geral.
+- No cadastro de conta, exibir uma caixa de seleção obrigatória com o texto “Declaro que tenho mais de 18 anos (ou a idade mínima recomendada) e concordo com os Termos de Uso”. A validação do servidor deve impedir o cadastro sem o aceite, e o sistema deve registrar a data/hora e a versão dos Termos aceitos.
+- No cadastro e edição de cada livro, exigir uma caixa seletora com as opções `Livre`, `+12`, `+14`, `+16` e `+18`; validar o valor no servidor e manter essa informação ao enviar e aprovar propostas de Funcionários.
+- Exibir claramente a classificação indicativa na descrição pública e nos cartões/listagens de cada livro. Para registros antigos sem classificação, indicar que ela está pendente, sem presumir uma faixa; o servidor deve impedir a publicação de livros sem uma classificação definida.
+- Criar uma migration aditiva para os campos de aceite e a classificação. Não aplicá-la nem alterar o banco/seed local nesta tarefa; não publicar, sincronizar ou fazer commit.

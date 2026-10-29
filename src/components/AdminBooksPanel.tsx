@@ -5,6 +5,7 @@ import { deleteBookAction, setBookPublishedAction } from "@/app/actions/catalog"
 import { BookAdminForm } from "@/components/BookAdminForm";
 import { CatalogApprovalPanel } from "@/components/CatalogApprovalPanel";
 import { formatBRL } from "@/lib/data";
+import { ageRatingLabel, type BookAgeRating } from "@/lib/book-rating";
 import type { PendingCatalogChange } from "@/lib/catalog-changes";
 
 type AuthorOption = { id: string; name: string };
@@ -17,6 +18,7 @@ type AdminBookRow = {
   year: number;
   category: string;
   pages: number;
+  ageRating: BookAgeRating | null;
   price: number;
   synopsis: string;
   published: boolean;
@@ -54,6 +56,7 @@ export function AdminBooksPanel({ books, authors, categories, isAdmin, publicati
     year: String(editingBook.year),
     category: editingBook.category,
     pages: String(editingBook.pages),
+    ageRating: editingBook.ageRating ?? "",
     price: editingBook.price.toFixed(2).replace(".", ","),
     synopsis: editingBook.synopsis,
     coverImageUrl: editingBook.coverImageUrl,
@@ -70,7 +73,7 @@ export function AdminBooksPanel({ books, authors, categories, isAdmin, publicati
           <h3>{editingBook ? `Editar livro: ${editingBook.title}` : "Cadastrar livro"}</h3>
           {editingBook && <span className="pill">Edição temporária</span>}
         </div>
-        {publicationError && <p className="error" role="alert">Não foi possível alterar a publicação do livro. Confira se o autor já está publicado.</p>}
+        {publicationError && <p className="error" role="alert">Não foi possível publicar o livro. Confira se há uma classificação indicativa e se o autor está publicado.</p>}
         {!isAdmin && <p className="muted">Novos livros ficam como rascunho. Edições de livros existentes aguardam confirmação de um administrador.</p>}
         <BookAdminForm
           key={editingBook?.id ?? "novo-livro"}
@@ -117,10 +120,10 @@ export function AdminBooksPanel({ books, authors, categories, isAdmin, publicati
         ) : (
           <div className="tbl">
             <table>
-              <thead><tr><th>Título</th><th>Autor</th><th>Categoria</th><th>Preço</th><th>Status</th><th>Ações</th></tr></thead>
+              <thead><tr><th>Título</th><th>Autor</th><th>Categoria</th><th>Classificação</th><th>Preço</th><th>Status</th><th>Ações</th></tr></thead>
               <tbody>{books.map((book) => (
                 <tr key={book.id}>
-                  <td>{book.title}</td><td>{book.author}</td><td>{book.category}</td><td>{formatBRL(book.price)}</td>
+                  <td>{book.title}</td><td>{book.author}</td><td>{book.category}</td><td>{ageRatingLabel(book.ageRating)}</td><td>{formatBRL(book.price)}</td>
                   <td><span className={book.published ? "pill" : "pill w"}>{book.published ? "Publicado" : "Rascunho"}</span></td>
                   <td><div className="row-actions">
                     <button className="btn sm ghost" type="button" onClick={() => setEditingBookId(book.id)}>Editar</button>

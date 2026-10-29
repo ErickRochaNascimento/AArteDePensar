@@ -1,6 +1,7 @@
 "use client";
 
 import { useActionState } from "react";
+import Link from "next/link";
 import { loginAction, registerAction } from "@/app/actions/auth";
 import type { AuthActionState } from "@/lib/auth-types";
 
@@ -94,6 +95,13 @@ export function AuthForms({ next }: { next?: string }) {
           />
         </label>
         <small className="muted">Sua senha será armazenada como hash protegido.</small>
+        <div className="consent-field">
+          <input id="age-and-terms-consent" name="ageAndTermsConsent" type="checkbox" value="accepted" required />
+          <label htmlFor="age-and-terms-consent">
+            Declaro que tenho mais de 18 anos (ou a idade mínima recomendada) e concordo com os <Link href="/termos">Termos de Uso</Link>
+          </label>
+        </div>
+        <small className="muted">Consulte também a <Link href="/privacidade">Política de Privacidade</Link>.</small>
         {registerState.error && (
           <p className="error" role="alert" aria-live="polite">
             {registerState.error}

@@ -25,6 +25,7 @@ const NOTICE_COPY: Record<string, string> = {
   "livro-na-biblioteca": "O livro está na biblioteca de um usuário e não pode ser excluído.",
   "livro-com-pendencia": "Resolva a proposta pendente antes de excluir este livro.",
   "livro-inexistente": "O livro não foi encontrado.",
+  "livro-sem-classificacao": "Selecione uma classificação indicativa antes de publicar este livro.",
   "erro-excluir-livro": "Não foi possível excluir o livro; verifique vínculos antes de tentar novamente.",
   "autor-precisa-ser-publicado": "Publique o autor antes de publicar o livro.",
   "erro-publicacao-livro": "Não foi possível alterar a publicação do livro.",
@@ -79,7 +80,7 @@ async function AuthorizedDashboard({
   const noticeText = typeof notice === "string" ? NOTICE_COPY[notice] : undefined;
   const errorNotices = new Set([
     "livro-na-biblioteca", "livro-com-pendencia", "livro-inexistente", "erro-excluir-livro",
-    "autor-precisa-ser-publicado", "erro-publicacao-livro", "autor-inexistente", "erro-excluir-autor",
+    "autor-precisa-ser-publicado", "livro-sem-classificacao", "erro-publicacao-livro", "autor-inexistente", "erro-excluir-autor",
     "autor-com-livros", "autor-com-pendencia", "autor-com-livros-publicados", "erro-publicacao-autor",
     "proposta-ja-analisada", "proposta-invalida", "erro-na-proposta",
   ]);
@@ -141,7 +142,7 @@ async function AuthorizedDashboard({
             authors={authors}
             categories={categories}
             isAdmin={isAdmin}
-            publicationError={notice === "autor-precisa-ser-publicado" || notice === "erro-publicacao-livro"}
+            publicationError={notice === "autor-precisa-ser-publicado" || notice === "livro-sem-classificacao" || notice === "erro-publicacao-livro"}
             pendingChanges={pendingBooks}
           />
         </section>

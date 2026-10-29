@@ -2,6 +2,8 @@
 // Livros e autores vêm do MySQL (src/lib/catalog.ts); os metadados de exemplo
 // ficam em prisma/seed-data.ts e só entram no banco com `npm run db:seed`.
 
+import type { BookAgeRating } from "@/lib/book-rating";
+
 export type Book = {
   id: string;
   slug: string;
@@ -12,6 +14,7 @@ export type Book = {
   price: number;
   category: string;
   pages: number;
+  ageRating: BookAgeRating | null;
   rating: number;
   reviewCount: number;
   synopsis: string;

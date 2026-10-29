@@ -121,6 +121,7 @@ export async function saveBookAction(
             pages: data.pages,
             price: data.price,
             synopsis: data.synopsis,
+            ageRating: data.ageRating,
           },
           submittedById: user.id,
         },
@@ -182,16 +183,17 @@ export async function setBookPublishedAction(formData: FormData) {
   const publish = formData.get("publish") === "true";
   if (typeof id !== "string" || !id) redirect("/admin#livros");
 
-  let book: { id: string; author: { published: boolean } } | null;
+  let book: { id: string; ageRating: string | null; author: { published: boolean } } | null;
   try {
     book = await getDb().book.findUnique({
       where: { id },
-      select: { id: true, author: { select: { published: true } } },
+      select: { id: true, ageRating: true, author: { select: { published: true } } },
     });
   } catch {
     redirect("/admin?notice=erro-publicacao-livro#livros");
   }
   if (!book) redirect("/admin?notice=livro-inexistente#livros");
+  if (publish && !book.ageRating) redirect("/admin?notice=livro-sem-classificacao#livros");
   if (publish && !book.author.published) redirect("/admin?notice=autor-precisa-ser-publicado#livros");
   try {
     await getDb().book.update({ where: { id }, data: { published: publish }, select: { id: true } });

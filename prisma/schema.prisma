@@ -24,12 +24,22 @@ enum CatalogChangeStatus {
   REJECTED
 }
 
+enum BookAgeRating {
+  LIVRE
+  MAIS_12
+  MAIS_14
+  MAIS_16
+  MAIS_18
+}
+
 model User {
   id                      String          @id @default(cuid()) @db.VarChar(30)
   name                    String          @db.VarChar(120)
   email                   String          @unique @db.VarChar(191)
   passwordHash            String          @db.VarChar(255)
   role                    UserRole        @default(USER)
+  termsAcceptedAt         DateTime?       @db.DateTime(3)
+  termsVersion            String?         @db.VarChar(32)
   createdAt               DateTime        @default(now()) @db.DateTime(3)
   updatedAt               DateTime        @updatedAt @db.DateTime(3)
   sessions                Session[]
@@ -69,29 +79,30 @@ model Author {
 }
 
 model Book {
-  id                String        @id @default(cuid()) @db.VarChar(30)
-  slug              String        @unique @db.VarChar(160)
-  title             String        @db.VarChar(160)
-  authorId          String        @db.VarChar(30)
+  id                String         @id @default(cuid()) @db.VarChar(30)
+  slug              String         @unique @db.VarChar(160)
+  title             String         @db.VarChar(160)
+  authorId          String         @db.VarChar(30)
   year              Int
-  category          String        @db.VarChar(60)
+  category          String         @db.VarChar(60)
   pages             Int
-  price             Decimal       @db.Decimal(10, 2)
-  synopsis          String        @db.Text
-  c1                String        @db.VarChar(7)
-  c2                String        @db.VarChar(7)
-  coverImageUrl     String?       @db.VarChar(255)
-  ebookStorageKey   String?       @unique @db.VarChar(80)
-  ebookMimeType     String?       @db.VarChar(100)
-  ebookOriginalName String?       @db.VarChar(255)
+  price             Decimal        @db.Decimal(10, 2)
+  synopsis          String         @db.Text
+  ageRating         BookAgeRating?
+  c1                String         @db.VarChar(7)
+  c2                String         @db.VarChar(7)
+  coverImageUrl     String?        @db.VarChar(255)
+  ebookStorageKey   String?        @unique @db.VarChar(80)
+  ebookMimeType     String?        @db.VarChar(100)
+  ebookOriginalName String?        @db.VarChar(255)
   ebookSize         Int?
   // Avaliações demonstrativas; avaliações reais permanecem fora do escopo desta etapa.
-  rating            Decimal       @default(0) @db.Decimal(2, 1)
-  reviewCount       Int           @default(0)
-  published         Boolean       @default(false)
-  createdAt         DateTime      @default(now()) @db.DateTime(3)
-  updatedAt         DateTime      @updatedAt @db.DateTime(3)
-  author            Author        @relation(fields: [authorId], references: [id], onDelete: Restrict)
+  rating            Decimal        @default(0) @db.Decimal(2, 1)
+  reviewCount       Int            @default(0)
+  published         Boolean        @default(false)
+  createdAt         DateTime       @default(now()) @db.DateTime(3)
+  updatedAt         DateTime       @updatedAt @db.DateTime(3)
+  author            Author         @relation(fields: [authorId], references: [id], onDelete: Restrict)
   libraryItems      LibraryItem[]
 
   @@index([authorId])
@@ -119,17 +130,17 @@ model LibraryItem {
 }
 
 model CatalogChange {
-  id            String             @id @default(cuid()) @db.VarChar(30)
+  id            String              @id @default(cuid()) @db.VarChar(30)
   entityType    CatalogEntityType
-  entityId      String             @db.VarChar(30)
+  entityId      String              @db.VarChar(30)
   payload       Json
   status        CatalogChangeStatus @default(PENDING)
-  submittedById String             @db.VarChar(30)
-  reviewedById  String?            @db.VarChar(30)
-  submittedAt   DateTime           @default(now()) @db.DateTime(3)
-  reviewedAt    DateTime?          @db.DateTime(3)
-  submittedBy   User               @relation("CatalogChangeSubmitter", fields: [submittedById], references: [id], onDelete: Restrict)
-  reviewedBy    User?              @relation("CatalogChangeReviewer", fields: [reviewedById], references: [id], onDelete: SetNull)
+  submittedById String              @db.VarChar(30)
+  reviewedById  String?             @db.VarChar(30)
+  submittedAt   DateTime            @default(now()) @db.DateTime(3)
+  reviewedAt    DateTime?           @db.DateTime(3)
+  submittedBy   User                @relation("CatalogChangeSubmitter", fields: [submittedById], references: [id], onDelete: Restrict)
+  reviewedBy    User?               @relation("CatalogChangeReviewer", fields: [reviewedById], references: [id], onDelete: SetNull)
 
   @@index([status, submittedAt])
   @@index([entityType, entityId, status])

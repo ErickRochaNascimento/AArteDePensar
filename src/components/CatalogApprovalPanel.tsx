@@ -3,6 +3,7 @@
 import { reviewCatalogChangeAction } from "@/app/actions/catalog-changes";
 import type { PendingCatalogChange } from "@/lib/catalog-changes";
 import { formatBRL } from "@/lib/data";
+import { ageRatingLabel } from "@/lib/book-rating";
 
 type AuthorOption = { id: string; name: string };
 
@@ -43,7 +44,7 @@ export function CatalogApprovalPanel({ changes, entityType, authors = [] }: Prop
             {entityType === "BOOK" ? (
               <div className="approval-details">
                 <p><strong>Autor:</strong> {authorName}</p>
-                <p><strong>Categoria:</strong> {payload.category || "—"} · <strong>Ano:</strong> {payload.year ?? "—"} · <strong>Páginas:</strong> {payload.pages ?? "—"}</p>
+                <p><strong>Categoria:</strong> {payload.category || "—"} · <strong>Classificação:</strong> {ageRatingLabel(payload.ageRating)} · <strong>Ano:</strong> {payload.year ?? "—"} · <strong>Páginas:</strong> {payload.pages ?? "—"}</p>
                 <p><strong>Preço:</strong> {formatBRL(Number(payload.price ?? 0))}</p>
                 <p><strong>Sinopse proposta:</strong> {payload.synopsis || "—"}</p>
               </div>

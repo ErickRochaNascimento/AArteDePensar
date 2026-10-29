@@ -10,6 +10,7 @@ import { BuyBox } from "@/components/BuyBox";
 import { Cover } from "@/components/Cover";
 import { ReviewForm } from "@/components/ReviewForm";
 import { Stars } from "@/components/Stars";
+import { ageRatingLabel } from "@/lib/book-rating";
 
 // Título e descrição vêm do banco a cada requisição.
 export async function generateMetadata({
@@ -72,6 +73,10 @@ async function BookDetail({ params }: Pick<PageProps<"/livro/[slug]">, "params">
             <div>
               <dt>Páginas</dt>
               <dd>{book.pages}</dd>
+            </div>
+            <div>
+              <dt>Classificação indicativa</dt>
+              <dd><span className={`age-rating${book.ageRating ? "" : " is-pending"}`}>{ageRatingLabel(book.ageRating)}</span></dd>
             </div>
             <div>
               <dt>Idioma</dt>

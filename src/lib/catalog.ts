@@ -3,6 +3,7 @@ import "server-only";
 import { cache } from "react";
 import { getDb } from "@/lib/db";
 import type { Author, Book } from "@/lib/data";
+import type { BookAgeRating } from "@/lib/book-rating";
 
 // Camada de leitura do catálogo (MySQL via Prisma). Tudo aqui roda só no
 // servidor e devolve DTOs simples: o preço Decimal vira number antes de chegar
@@ -16,6 +17,7 @@ const bookSelect = {
   price: true,
   category: true,
   pages: true,
+  ageRating: true,
   rating: true,
   reviewCount: true,
   synopsis: true,
@@ -34,6 +36,7 @@ type BookRow = {
   price: { toString(): string };
   category: string;
   pages: number;
+  ageRating: BookAgeRating | null;
   rating: { toString(): string };
   reviewCount: number;
   synopsis: string;
@@ -55,6 +58,7 @@ function toBook(row: BookRow): Book {
     price: Number(row.price.toString()),
     category: row.category,
     pages: row.pages,
+    ageRating: row.ageRating,
     rating: Number(row.rating.toString()),
     reviewCount: row.reviewCount,
     synopsis: row.synopsis,

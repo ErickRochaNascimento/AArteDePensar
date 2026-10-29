@@ -5,6 +5,7 @@ import { saveBookAction } from "@/app/actions/catalog";
 import { AuthorAdminForm } from "@/components/AuthorAdminForm";
 import { BookMediaManager } from "@/components/BookMediaManager";
 import { normalizeText } from "@/lib/data";
+import { BOOK_AGE_RATINGS } from "@/lib/book-rating";
 import type { BookFormValues } from "@/lib/book-input";
 import type { BookFormState } from "@/lib/book-form-types";
 
@@ -299,6 +300,15 @@ export function BookAdminForm({ authors: availableAuthors, categories, isAdmin, 
           </div>
           {fieldError("category") && <span className="error">{fieldError("category")}</span>}
         </div>
+
+        <label className="full" htmlFor="book-age-rating">
+          Classificação indicativa
+          <select id="book-age-rating" name="ageRating" defaultValue={value("ageRating")} aria-invalid={Boolean(fieldError("ageRating"))} required>
+            <option value="">Selecione a faixa etária recomendada</option>
+            {BOOK_AGE_RATINGS.map((rating) => <option key={rating.value} value={rating.value}>{rating.label}</option>)}
+          </select>
+          {fieldError("ageRating") && <span className="error">{fieldError("ageRating")}</span>}
+        </label>
 
         <label>
           Ano

@@ -8,6 +8,7 @@ import { getDb } from "@/lib/db";
 import type { AuthActionState } from "@/lib/auth-types";
 import { safeNext } from "@/lib/safe-redirect";
 import { createSession, revokeCurrentSession } from "@/lib/session";
+import { TERMS_VERSION } from "@/lib/legal";
 
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -42,6 +43,7 @@ export async function registerAction(
   const name = readText(formData, "name").trim();
   const email = readText(formData, "email").trim().toLowerCase();
   const password = readText(formData, "password");
+  const acceptedAgeAndTerms = formData.get("ageAndTermsConsent") === "accepted";
 
   if (name.length < 2 || name.length > 120) {
     return { error: "Informe um nome entre 2 e 120 caracteres." };
@@ -52,6 +54,9 @@ export async function registerAction(
   if (password.length < 8 || password.length > 128) {
     return { error: "A senha deve ter entre 8 e 128 caracteres." };
   }
+  if (!acceptedAgeAndTerms) {
+    return { error: "Confirme a idade mínima e aceite os Termos de Uso para criar uma conta." };
+  }
 
   let user: { id: string };
   try {
@@ -59,7 +64,13 @@ export async function registerAction(
       type: argon2.argon2id,
     });
     user = await getDb().user.create({
-      data: { name, email, passwordHash },
+      data: {
+        name,
+        email,
+        passwordHash,
+        termsAcceptedAt: new Date(),
+        termsVersion: TERMS_VERSION,
+      },
       select: { id: true },
     });
   } catch (error) {

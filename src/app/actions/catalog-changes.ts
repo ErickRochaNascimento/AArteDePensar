@@ -59,7 +59,7 @@ export async function reviewCatalogChangeAction(formData: FormData) {
 
       if (change.entityType === "BOOK") {
         const submission = new FormData();
-        for (const key of ["title", "authorId", "year", "category", "pages", "price", "synopsis"]) {
+        for (const key of ["title", "authorId", "year", "category", "pages", "price", "synopsis", "ageRating"]) {
           const value = payload[key];
           if (typeof value === "string" || typeof value === "number") submission.set(key, String(value));
         }

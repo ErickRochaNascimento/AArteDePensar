@@ -1,4 +1,5 @@
 import { slugify } from "@/lib/data";
+import { isBookAgeRating, type BookAgeRating } from "@/lib/book-rating";
 
 // Validação dos campos de livro no servidor (usada pelas ações do Admin).
 
@@ -10,6 +11,7 @@ export type BookFormValues = {
   pages: string;
   price: string;
   synopsis: string;
+  ageRating: string;
 };
 
 export type BookInput = {
@@ -20,6 +22,7 @@ export type BookInput = {
   pages: number;
   price: string; // "24.90", pronto para o Decimal do Prisma
   synopsis: string;
+  ageRating: BookAgeRating;
 };
 
 export type BookFieldErrors = Partial<Record<keyof BookFormValues, string>>;
@@ -32,6 +35,7 @@ export const EMPTY_BOOK_VALUES: BookFormValues = {
   pages: "",
   price: "",
   synopsis: "",
+  ageRating: "",
 };
 
 function text(formData: FormData, key: string) {
@@ -48,6 +52,7 @@ export function readBookValues(formData: FormData): BookFormValues {
     pages: text(formData, "pages"),
     price: text(formData, "price"),
     synopsis: text(formData, "synopsis"),
+    ageRating: text(formData, "ageRating"),
   };
 }
 
@@ -107,6 +112,10 @@ export function validateBook(
     errors.synopsis = "Escreva uma sinopse entre 10 e 4000 caracteres.";
   }
 
+  if (!isBookAgeRating(values.ageRating)) {
+    errors.ageRating = "Selecione uma classificação indicativa válida.";
+  }
+
   if (Object.keys(errors).length > 0) return { errors };
 
   return {
@@ -118,6 +127,7 @@ export function validateBook(
       pages: pages as number,
       price: price as string,
       synopsis: values.synopsis,
+      ageRating: values.ageRating as BookAgeRating,
     },
   };
 }
